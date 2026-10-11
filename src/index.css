@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-serif-display: 'Cinzel', serif;
+    --font-serif-editorial: 'Cormorant Garamond', Georgia, serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-mono: 'Space Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #08080a;
+    color: #e6e4df;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-serif-display {
+    font-family: var(--font-serif-display);
+    letter-spacing: 0.04em;
+  }
+
+  .font-editorial {
+    font-family: var(--font-serif-editorial);
+  }
+
+  .font-mono-numbers {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Custom editorial effects */
+.gold-gradient-text {
+  background: linear-gradient(135deg, #FFF1C5 0%, #E5C158 35%, #C5A059 70%, #9E7D3B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-gradient-subtle {
+  background: linear-gradient(135deg, #F5E6BE 0%, #D4AF37 50%, #AA820A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-border {
+  border-color: rgba(197, 160, 89, 0.28);
+}
+
+.gold-border-glow:hover {
+  border-color: rgba(229, 193, 88, 0.6);
+  box-shadow: 0 0 25px -5px rgba(212, 175, 55, 0.15);
+}
+
+/* Postage stamp scalloped / perforated edge */
+.postage-stamp-border {
+  border: 1px dashed rgba(212, 175, 55, 0.35);
+  box-shadow: inset 0 0 0 3px rgba(10, 10, 12, 0.9), inset 0 0 0 4px rgba(212, 175, 55, 0.2);
+}
+
+/* Archival texture overlay */
+.archival-grain {
+  background-image: radial-gradient(rgba(212, 175, 55, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}

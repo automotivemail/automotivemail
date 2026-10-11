@@ -1,0 +1,9 @@
+{
+  "name": "Automotive Mail",
+  "description": "Premium monthly subscription delivering physical art prints, blueprints, and archival stories of iconic cars and aircraft to collectors across India.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
+
