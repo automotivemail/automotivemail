@@ -30,7 +30,7 @@ export const NostalgicMission: React.FC = () => {
                 There was a time when petrolheads and aviation dreamers waited patiently by the mailbox for foreign motoring journals, blueprint schematics, and letters from race engineers. Automotive Mail was founded to resurrect that lost tactile romance for collectors across India.
               </p>
               <p>
-                When you slice open our wax-sealed black envelope, the scent of fresh pigment ink on 300 GSM cotton rag paper commands your uninterrupted attention. You are not just hanging a poster; you are curating an heirloom tribute to human courage, aerodynamics, and mechanical perfection.
+                When you slice open our wax-sealed black envelope, the scent of fresh pigment ink on 250 to 300 GSM archival paper commands your uninterrupted attention. You are not just hanging a poster; you are curating an heirloom tribute to human courage, aerodynamics, and mechanical perfection.
               </p>
             </div>
 

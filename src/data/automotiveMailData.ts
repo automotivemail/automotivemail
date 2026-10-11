@@ -59,7 +59,7 @@ export const SUBSCRIPTION_PLANS: PlanTier[] = [
     period: '/ month',
     isPopular: false,
     includes: {
-      heroPoster: '1× A3 Archival Cotton Hero Poster (300 GSM)',
+      heroPoster: '1× A3 Archival Hero Poster (250 to 300 GSM)',
       blueprint: '1× Technical Schematic Blueprint (White on Midnight Indigo)',
       magazineCover: '1× Vintage Era Editorial Magazine Cover Print',
       storyLetter: '1× Curated Collector’s Historical Story Letter',
@@ -81,7 +81,7 @@ export const SUBSCRIPTION_PLANS: PlanTier[] = [
     isPopular: true,
     savingsNote: 'Save ₹159 / month vs individual tiers',
     includes: {
-      heroPoster: '2× A3 Archival Cotton Hero Posters (1 Car + 1 Aircraft)',
+      heroPoster: '2× A3 Archival Hero Posters (250 to 300 GSM) (1 Car + 1 Aircraft)',
       blueprint: '2× Technical Schematic Blueprints (Precision Schematics)',
       magazineCover: '2× Vintage Editorial Magazine Covers',
       storyLetter: '2× Curated Historical Dossier Letters & Flight Logs',
@@ -102,7 +102,7 @@ export const SUBSCRIPTION_PLANS: PlanTier[] = [
     period: '/ month',
     isPopular: false,
     includes: {
-      heroPoster: '1× A3 Archival Cotton Hero Poster (300 GSM)',
+      heroPoster: '1× A3 Archival Hero Poster (250 to 300 GSM)',
       blueprint: '1× Technical Schematic Blueprint (Cockpit & Airframe Spec)',
       magazineCover: '1× Vintage Golden Age Aviation Journal Cover',
       storyLetter: '1× Curated Pilot Log & Engineering History Letter',
@@ -125,7 +125,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: 'Mumbai',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&h=160&fit=crop&crop=faces&q=80',
     quote:
-      'The 300 GSM cotton stock feels like an actual museum acquisition. When the black wax-sealed mailer arrived at my home in South Mumbai, holding the 1973 Carrera RS blueprint and vintage polaroids was pure tactile magic. Nothing in India matches this production standard.',
+      'The 250 to 300 GSM archival stock feels like an actual museum acquisition. When the black wax-sealed mailer arrived at my home in South Mumbai, holding the 1973 Carrera RS blueprint and vintage polaroids was pure tactile magic. Nothing in India matches this production standard.',
     rating: 5,
     collectorSince: 'Founding Member #041',
     favoriteDrop: '1973 Porsche 911 RS 2.7',
@@ -166,7 +166,7 @@ export const DROPS_CATALOG: DropItem[] = [
     specs: '2,687 cc Flat-Six · 210 PS · 245 km/h · 975 kg',
     description: 'The definitive homologation lightweight with the iconic ducktail spoiler and Fuchs forged alloy wheels.',
     badge: 'CURRENT ACTIVE DROP',
-    heroPosterNote: 'A3 Giclée on 300 GSM Hahnemühle German Etching Cotton Paper',
+    heroPosterNote: 'A3 Giclée on 250 to 300 GSM Hahnemühle German Etching Archival Paper',
     blueprintNote: 'Orthographic 4-view technical blueprint with factory chassis tolerances',
     magazineTitle: 'Christophorus Edition No. 119 Cover Reproduction',
     letterSnippet: 'The night Norbert Singer tested the ducktail in the wind tunnel...',
@@ -224,13 +224,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'Subscription',
     question: 'How does the Automotive Mail subscription work?',
     answer:
-      'Every month, our curation team selects an iconic historic automobile, legendary aircraft, or both (depending on your tier). We engineer a five-piece physical art package containing a 300 GSM A3 cotton hero poster, an authentic engineering blueprint schematic, a vintage magazine cover print, an archival story letter, and three polaroids. It is packed into our rigid, wax-sealed mailer and shipped straight to your doorstep across India.'
+      'Every month, our curation team selects an iconic historic automobile, legendary aircraft, or both (depending on your tier). We engineer a five-piece physical art package containing a 250 to 300 GSM A3 hero poster, an authentic engineering blueprint schematic, a vintage magazine cover print, an archival story letter, and three polaroids. It is packed into our rigid, wax-sealed mailer and shipped straight to your doorstep across India.'
   },
   {
     category: 'Deliverables',
     question: "What is included inside every monthly dispatch?",
     answer:
-      'Each standard single-tier box (Cars Only or Planes Only) contains 5 physical collector artifacts: (1) One A3 300 GSM Archival Cotton Hero Poster, (2) One Technical Schematic Blueprint, (3) One Vintage Magazine Cover reproduction, (4) One hand-researched Story Letter with historical dispatch notes, and (5) Three High-Gloss Mini Polaroid snapshots. In the "Both Worlds" tier (₹759/mo), you receive double the payload with items for both the featured car and aircraft, plus an official numbered Certificate of Authenticity.'
+      'Each standard single-tier box (Cars Only or Planes Only) contains 5 physical collector artifacts: (1) One A3 250 to 300 GSM Archival Hero Poster, (2) One Technical Schematic Blueprint, (3) One Vintage Magazine Cover reproduction, (4) One hand-researched Story Letter with historical dispatch notes, and (5) Three High-Gloss Mini Polaroid snapshots. In the "Both Worlds" tier (₹759/mo), you receive double the payload with items for both the featured car and aircraft, plus an official numbered Certificate of Authenticity.'
   },
   {
     category: 'Collectibility',
@@ -264,7 +264,7 @@ export const HOW_IT_WORKS_STEPS = [
     step: '02',
     title: 'Pack the Art',
     subtitle: 'Archival Craft',
-    description: 'We reproduce 5 physical artifacts per subject on museum-grade 300 GSM cotton rag paper with pigment inks that resist fading for 100+ years.',
+    description: 'We reproduce 5 physical artifacts per subject on museum-grade 250 to 300 GSM archival paper with pigment inks that resist fading for 100+ years.',
     detail: 'Carefully assembled with archival blueprints, vintage magazine typography, curated letters, and glossy darkroom polaroids.'
   },
   {
@@ -279,8 +279,8 @@ export const HOW_IT_WORKS_STEPS = [
 export const GUARANTEE_POINTS = [
   {
     title: 'Archival Paper',
-    description: '300 GSM heavyweight cotton rag stock. Acid-free, tactile, and designed to never yellow or warp over decades.',
-    badge: '300 GSM Cotton'
+    description: '250 to 300 GSM heavyweight archival stock. Acid-free, tactile, and designed to never yellow or warp over decades.',
+    badge: '250 to 300 GSM'
   },
   {
     title: 'Museum-Quality Printing',

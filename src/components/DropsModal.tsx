@@ -188,9 +188,9 @@ export const DropsModal: React.FC = () => {
 
                   {activeTab === 'poster' && (
                     <div className="text-xs text-[#D8D6CE] space-y-1">
-                      <div className="font-semibold text-white">A3 Archival Cotton Hero Poster</div>
+                      <div className="font-semibold text-white">A3 Archival Hero Poster (250 to 300 GSM)</div>
                       <div>{selectedDrop.heroPosterNote}</div>
-                      <div className="text-[11px] text-[#8E8C85] font-mono">Dimensions: 297 × 420 mm · 300 GSM Heavyweight</div>
+                      <div className="text-[11px] text-[#8E8C85] font-mono">Dimensions: 297 × 420 mm · 250 to 300 GSM Heavyweight</div>
                     </div>
                   )}
 

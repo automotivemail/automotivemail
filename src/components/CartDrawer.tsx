@@ -213,7 +213,7 @@ export const CartDrawer: React.FC = () => {
                         <div className="mt-3 pt-3 border-t border-[#1C1C26] text-[11px] text-[#A6A49F] space-y-1">
                           <div className="flex items-center gap-1.5">
                             <span className="w-1 h-1 rounded-full bg-[#E5C158]" />
-                            <span>1× 300 GSM Archival Cotton Hero Poster</span>
+                            <span>1× 250 to 300 GSM Archival Hero Poster</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <span className="w-1 h-1 rounded-full bg-[#38BDF8]" />

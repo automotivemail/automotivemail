@@ -77,7 +77,7 @@ export const Hero: React.FC = () => {
           </div>
           <div className="flex flex-col">
             <span className="font-mono text-xs text-[#8E8C85] uppercase tracking-wider">Paper Quality</span>
-            <span className="font-serif-display text-lg text-[#F4F1EA] font-bold mt-0.5">300 GSM Cotton</span>
+            <span className="font-serif-display text-lg text-[#F4F1EA] font-bold mt-0.5">250 to 300 GSM</span>
           </div>
           <div className="flex flex-col">
             <span className="font-mono text-xs text-[#8E8C85] uppercase tracking-wider">Starting Tier</span>
