@@ -228,7 +228,16 @@ export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = (
       const selectedPlan = cart.length > 0 ? cart[0].plan : SUBSCRIPTION_PLANS[1];
       const amount = cartTotal || selectedPlan.price;
       const orderId = `AM-${Date.now().toString().slice(-6)}`;
-      const trackingCode = `BLUEDART-AM-${Math.floor(100000 + Math.random() * 900000)}`;
+
+      // Calculate upcoming monthly dispatch date (15th of next month)
+      const nextMonth = new Date();
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      nextMonth.setDate(15);
+      const computedNextDispatch = nextMonth.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
 
       const newOrder: FirestoreOrder = {
         id: orderId,
@@ -244,8 +253,8 @@ export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = (
         shippingAddress: address,
         isGift: Boolean(giftDetails?.recipient),
         giftDetails: giftDetails?.recipient ? giftDetails : undefined,
-        trackingNumber: trackingCode,
-        estimatedDelivery: '3 to 5 business days (Tracked Air Express across India)',
+        trackingNumber: 'Pending dispatch',
+        estimatedDelivery: '3 to 5 business days after monthly dispatch',
         createdAt: new Date().toISOString(),
       };
 
@@ -263,7 +272,7 @@ export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = (
         status: 'active',
         price: selectedPlan.price,
         currency: 'INR',
-        nextDispatchDate: '18 November 2026',
+        nextDispatchDate: computedNextDispatch,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

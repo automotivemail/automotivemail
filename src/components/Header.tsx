@@ -96,7 +96,7 @@ export const Header: React.FC = () => {
 
                 {/* Account Dropdown Menu with real Firestore data */}
                 {isAccountDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-72 bg-[#121216] border border-[#2B2B33] rounded-lg shadow-2xl p-4 text-xs z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="absolute right-0 mt-2 w-72 bg-[#121218] border border-[#2B2B33] rounded-lg shadow-2xl p-4 text-xs z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                     <div className="pb-3 border-b border-[#23232A]">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[#8E8C85] text-[11px] uppercase tracking-wider">
@@ -184,14 +184,22 @@ export const Header: React.FC = () => {
                 )}
               </div>
             ) : (
-              /* Logged-out Visitor: Clean Login / Create Account Button */
-              <button
-                onClick={() => openAuthModal('login')}
-                className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold uppercase tracking-wider text-[#F4F1EA] bg-[#141418] hover:bg-[#1E1E26] border border-[#2B2B33] hover:border-[#C5A059]/40 rounded transition-colors"
-              >
-                <LogIn className="w-3.5 h-3.5 text-[#E5C158]" />
-                <span>Sign In</span>
-              </button>
+              /* Logged-out Visitor: Clean Login / Create Account options */
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => openAuthModal('login')}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[#F4F1EA] bg-[#141418] hover:bg-[#1E1E26] border border-[#2B2B33] hover:border-[#C5A059]/40 rounded transition-colors"
+                >
+                  <LogIn className="w-3.5 h-3.5 text-[#E5C158]" />
+                  <span>Login</span>
+                </button>
+                <button
+                  onClick={() => openAuthModal('register')}
+                  className="hidden sm:inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[#E5C158] hover:text-[#FFF1C5] hover:bg-[#1A1A22] border border-[#C5A059]/30 rounded transition-colors"
+                >
+                  <span>Create Account</span>
+                </button>
+              </div>
             )}
 
             {/* Cart Icon with Working Badge Counter */}
