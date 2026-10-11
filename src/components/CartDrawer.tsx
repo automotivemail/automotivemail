@@ -447,16 +447,50 @@ export const CartDrawer: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Prompt to login during payment confirmation if not authenticated */}
+                {!user && (
+                  <div className="p-4 rounded-xl bg-[#1C180E] border border-[#C5A059]/50 space-y-3 animate-in fade-in duration-150">
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#E5C158]">
+                      <Lock className="w-4 h-4 text-[#E5C158]" />
+                      <span>Collector Sign-In Required for Order Confirmation</span>
+                    </div>
+                    <p className="text-[11px] text-[#A69E89] leading-relaxed">
+                      Your order and physical dispatch certificate must be securely archived to your collector account in Cloud Firestore. Please sign in or register to complete payment confirmation.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => openAuthModal('login')}
+                        className="py-2.5 px-3 text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-[#F4E3B2] to-[#C5A059] text-black rounded hover:brightness-105 transition-all text-center shadow-md cursor-pointer"
+                      >
+                        Sign In
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openAuthModal('register')}
+                        className="py-2.5 px-3 text-xs font-bold uppercase tracking-wider border border-[#C5A059]/60 text-[#E5C158] hover:text-[#FFF1C5] hover:bg-[#221C10] rounded transition-all text-center cursor-pointer"
+                      >
+                        Create Account
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-3">
                   <button
                     type="submit"
                     disabled={isSubmittingOrder}
-                    className="w-full py-3.5 rounded text-xs font-bold uppercase tracking-[0.16em] bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] text-black shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="w-full py-3.5 rounded text-xs font-bold uppercase tracking-[0.16em] bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] text-black shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer hover:brightness-105 transition-all"
                   >
                     {isSubmittingOrder ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin text-black" />
                         <span>Recording in Firestore 'orders'...</span>
+                      </>
+                    ) : !user ? (
+                      <>
+                        <Lock className="w-4 h-4 text-black" />
+                        <span>Sign In & Confirm Order · ₹{cartTotal} / mo</span>
                       </>
                     ) : (
                       <span>Place Subscription Order · ₹{cartTotal} / mo</span>

@@ -20,51 +20,101 @@ import { DropsModal } from './components/DropsModal';
 import { CartDrawer } from './components/CartDrawer';
 import { AccountModal } from './components/AccountModal';
 import { AuthModal } from './components/AuthModal';
+import { LoginPage } from './components/LoginPage';
+
+function MainContent() {
+  const [currentRoute, setCurrentRoute] = React.useState<'home' | 'login' | 'register'>('home');
+
+  React.useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.toLowerCase();
+      const path = window.location.pathname.toLowerCase();
+      if (hash === '#/login' || hash === '#login' || path === '/login') {
+        setCurrentRoute('login');
+      } else if (hash === '#/register' || hash === '#register' || path === '/register') {
+        setCurrentRoute('register');
+      } else {
+        setCurrentRoute('home');
+      }
+    };
+
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    window.addEventListener('popstate', handleHash);
+    return () => {
+      window.removeEventListener('hashchange', handleHash);
+      window.removeEventListener('popstate', handleHash);
+    };
+  }, []);
+
+  const navigateToHome = () => {
+    window.location.hash = '';
+    setCurrentRoute('home');
+  };
+
+  if (currentRoute === 'login' || currentRoute === 'register') {
+    return (
+      <div className="min-h-screen bg-[#08080A] text-[#E6E4DF] selection:bg-[#C5A059]/30 selection:text-[#F3E5AB]">
+        <LoginPage
+          defaultMode={currentRoute === 'register' ? 'register' : 'login'}
+          onBackToHome={navigateToHome}
+        />
+        <CartDrawer />
+        <AccountModal />
+        <AuthModal />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#08080A] text-[#E6E4DF] selection:bg-[#C5A059]/30 selection:text-[#F3E5AB]">
+      {/* Header - Fixed dark nav */}
+      <Header />
+
+      {/* Main 8 Homepage Sections */}
+      <main>
+        {/* 1. Hero */}
+        <Hero />
+
+        {/* 2. Subscription Plans */}
+        <SubscriptionPlans />
+
+        {/* 3. Enthusiast Voices */}
+        <EnthusiastVoices />
+
+        {/* 4. The Legendary Subject */}
+        <LegendarySubject />
+
+        {/* 5. How It Works */}
+        <HowItWorks />
+
+        {/* 6. The Guarantee */}
+        <TheGuarantee />
+
+        {/* 7. The Nostalgic Mission */}
+        <NostalgicMission />
+
+        {/* 8. FAQ */}
+        <FAQ />
+      </main>
+
+      {/* Footer */}
+      <Footer />
+
+      {/* Interactive Modals and Drawers */}
+      <DropsModal />
+      <CartDrawer />
+      <AccountModal />
+      <AuthModal />
+    </div>
+  );
+}
 
 export default function App() {
   return (
     <AuthProvider>
       <AutomotiveMailProvider>
-        <div className="min-h-screen bg-[#08080A] text-[#E6E4DF] selection:bg-[#C5A059]/30 selection:text-[#F3E5AB]">
-          {/* Header - Fixed dark nav */}
-          <Header />
-
-          {/* Main 8 Homepage Sections */}
-          <main>
-            {/* 1. Hero */}
-            <Hero />
-
-            {/* 2. Subscription Plans */}
-            <SubscriptionPlans />
-
-            {/* 3. Enthusiast Voices */}
-            <EnthusiastVoices />
-
-            {/* 4. The Legendary Subject */}
-            <LegendarySubject />
-
-            {/* 5. How It Works */}
-            <HowItWorks />
-
-            {/* 6. The Guarantee */}
-            <TheGuarantee />
-
-            {/* 7. The Nostalgic Mission */}
-            <NostalgicMission />
-
-            {/* 8. FAQ */}
-            <FAQ />
-          </main>
-
-          {/* Footer */}
-          <Footer />
-
-          {/* Interactive Modals and Drawers */}
-          <DropsModal />
-          <CartDrawer />
-          <AccountModal />
-          <AuthModal />
-        </div>
+        <MainContent />
       </AutomotiveMailProvider>
     </AuthProvider>
   );
