@@ -1,7 +1,22 @@
-import React, { useState } from 'react';
-import { useAutomotiveMail, UserAddress, OrderConfirmation } from '../context/AutomotiveMailContext';
+import React, { useState, useEffect } from 'react';
+import { useAutomotiveMail, FirestoreOrder } from '../context/AutomotiveMailContext';
+import { useAuth, UserShippingAddress } from '../context/AuthContext';
 import { AutomotiveMailLogo } from './AutomotiveMailLogo';
-import { X, Trash2, ShieldCheck, CheckCircle2, Gift, MapPin, Truck, ArrowRight, CreditCard, Smartphone } from 'lucide-react';
+import {
+  X,
+  Trash2,
+  ShieldCheck,
+  CheckCircle2,
+  Gift,
+  MapPin,
+  Truck,
+  ArrowRight,
+  CreditCard,
+  Smartphone,
+  Lock,
+  Loader2,
+  AlertCircle,
+} from 'lucide-react';
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -9,44 +24,98 @@ export const CartDrawer: React.FC = () => {
     cartCount,
     cartTotal,
     removeFromCart,
-    clearCart,
     isCartOpen,
     setIsCartOpen,
-    userAddress,
     completeCheckout,
     lastOrder,
+    isSubmittingOrder,
   } = useAutomotiveMail();
 
+  const { user, userProfile, openAuthModal } = useAuth();
+
   const [step, setStep] = useState<'cart' | 'checkout' | 'success'>('cart');
-  const [addressForm, setAddressForm] = useState<UserAddress>(userAddress);
-  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'cod'>('upi');
+  const [addressForm, setAddressForm] = useState<UserShippingAddress>({
+    fullName: '',
+    phone: '',
+    streetAddress: '',
+    city: '',
+    state: '',
+    pincode: '',
+  });
+
+  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card'>('upi');
   const [isGiftMode, setIsGiftMode] = useState(false);
   const [giftRecipient, setGiftRecipient] = useState('');
-  const [giftNote, setGiftNote] = useState('Happy Birthday! May your mailbox carry the finest speed.');
-  const [confirmedOrder, setConfirmedOrder] = useState<OrderConfirmation | null>(null);
+  const [giftNote, setGiftNote] = useState('May your walls carry the spirit of legendary engineering.');
+  const [confirmedOrder, setConfirmedOrder] = useState<FirestoreOrder | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Sync address form with user's saved Firestore profile if available
+  useEffect(() => {
+    if (userProfile?.shippingAddress) {
+      setAddressForm(userProfile.shippingAddress);
+    } else if (user) {
+      setAddressForm((prev) => ({
+        ...prev,
+        fullName: prev.fullName || userProfile?.displayName || user.displayName || '',
+      }));
+    }
+  }, [userProfile, user]);
 
   if (!isCartOpen) return null;
 
   const handleProceedToCheckout = () => {
+    setErrorMsg(null);
+    if (!user) {
+      // Require login before checkout, preserving the cart
+      openAuthModal('login', () => {
+        setStep('checkout');
+      });
+      return;
+    }
     setStep('checkout');
   };
 
-  const handleSubmitOrder = (e: React.FormEvent) => {
+  const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    const order = completeCheckout({
-      address: addressForm,
-      paymentMethod,
-      giftDetails: isGiftMode ? { recipient: giftRecipient, note: giftNote } : undefined,
-    });
-    setConfirmedOrder(order);
-    setStep('success');
+    setErrorMsg(null);
+
+    if (!user) {
+      openAuthModal('login');
+      return;
+    }
+
+    if (
+      !addressForm.fullName ||
+      !addressForm.phone ||
+      !addressForm.streetAddress ||
+      !addressForm.city ||
+      !addressForm.state ||
+      !addressForm.pincode
+    ) {
+      setErrorMsg('Please complete all Indian postal delivery fields.');
+      return;
+    }
+
+    try {
+      const order = await completeCheckout({
+        address: addressForm,
+        paymentMethod,
+        giftDetails: isGiftMode ? { recipient: giftRecipient, note: giftNote } : undefined,
+      });
+      setConfirmedOrder(order);
+      setStep('success');
+    } catch (err: any) {
+      console.error('Order creation error:', err);
+      setErrorMsg(err.message || 'Failed to place order in database. Please try again.');
+    }
   };
 
   const handleClose = () => {
     setIsCartOpen(false);
-    // Reset back to cart view after close
     setTimeout(() => {
       setStep('cart');
+      setErrorMsg(null);
     }, 300);
   };
 
@@ -62,12 +131,12 @@ export const CartDrawer: React.FC = () => {
                 <h3 className="font-serif-display font-bold text-sm uppercase tracking-wide text-white">
                   {step === 'cart' && 'Collector Cart'}
                   {step === 'checkout' && 'Indian Express Dispatch'}
-                  {step === 'success' && 'Dispatch Confirmed'}
+                  {step === 'success' && 'Order Stored in Firestore'}
                 </h3>
                 <span className="text-[11px] font-mono text-[#8E8C85]">
                   {step === 'cart' && `${cartCount} Subscription Item${cartCount === 1 ? '' : 's'}`}
-                  {step === 'checkout' && 'Verified Pan-India Shipping'}
-                  {step === 'success' && 'Sealed & En Route'}
+                  {step === 'checkout' && (user ? `Collector: ${user.email}` : 'Sign in required')}
+                  {step === 'success' && 'Archived in Database'}
                 </span>
               </div>
             </div>
@@ -83,6 +152,13 @@ export const CartDrawer: React.FC = () => {
 
           {/* Drawer Body */}
           <div className="flex-1 overflow-y-auto p-5 space-y-6">
+            {errorMsg && (
+              <div className="p-3 rounded-lg bg-[#3F1118]/80 border border-[#991B1B]/70 flex items-start gap-2.5 text-xs text-[#FCA5A5]">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#EF4444]" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
             {/* STEP 1: CART VIEW */}
             {step === 'cart' && (
               <>
@@ -93,7 +169,7 @@ export const CartDrawer: React.FC = () => {
                     </div>
                     <div className="font-serif-display text-lg text-white font-bold">Your Mailbag is Empty</div>
                     <p className="text-xs text-[#8E8C85] max-w-xs mx-auto">
-                      Choose a subscription plan to start receiving physical museum prints at your doorstep in India.
+                      Choose a subscription tier to begin receiving physical museum-grade prints at your doorstep in India.
                     </p>
                     <a
                       href="#plans"
@@ -113,7 +189,7 @@ export const CartDrawer: React.FC = () => {
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <span className="text-[10px] font-mono text-[#E5C158] uppercase tracking-wider">
-                              Monthly Subscription
+                              Monthly Subscription Tier
                             </span>
                             <h4 className="font-serif-display font-bold text-base text-white">
                               {item.plan.name}
@@ -130,19 +206,19 @@ export const CartDrawer: React.FC = () => {
                           </button>
                         </div>
 
-                        {/* Included items mini summary */}
+                        {/* Included artifacts summary */}
                         <div className="mt-3 pt-3 border-t border-[#1C1C26] text-[11px] text-[#A6A49F] space-y-1">
                           <div className="flex items-center gap-1.5">
                             <span className="w-1 h-1 rounded-full bg-[#E5C158]" />
-                            <span>1× 300 GSM Archival Hero Poster</span>
+                            <span>1× 300 GSM Archival Cotton Hero Poster</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <span className="w-1 h-1 rounded-full bg-[#38BDF8]" />
-                            <span>1× Technical Blueprint Schematic</span>
+                            <span>1× Technical Schematic Blueprint</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <span className="w-1 h-1 rounded-full bg-[#FB923C]" />
-                            <span>1× Magazine Cover + Story Letter + 3× Polaroids</span>
+                            <span>1× Vintage Magazine Cover + Story Letter + 3× Polaroids</span>
                           </div>
                         </div>
 
@@ -209,35 +285,45 @@ export const CartDrawer: React.FC = () => {
               </>
             )}
 
-            {/* STEP 2: CHECKOUT VIEW */}
+            {/* STEP 2: REAL CHECKOUT VIEW */}
             {step === 'checkout' && (
               <form onSubmit={handleSubmitOrder} className="space-y-5">
                 <div className="p-3.5 rounded-lg bg-[#14141C] border border-[#242432] text-xs">
                   <div className="flex justify-between text-[#8E8C85] mb-1">
-                    <span>Plan Payload:</span>
+                    <span>Selected Plan:</span>
                     <span className="text-white font-medium">{cart[0]?.plan.name || 'Both Worlds'}</span>
                   </div>
                   <div className="flex justify-between text-[#8E8C85] mb-1">
                     <span>Monthly Subscription:</span>
                     <span className="text-white font-mono">₹{cartTotal}</span>
                   </div>
-                  <div className="flex justify-between text-[#8E8C85]">
+                  <div className="flex justify-between text-[#8E8C85] mb-1">
                     <span>Pan-India Shipping:</span>
                     <span className="text-[#34D399] font-mono">FREE (Air Express)</span>
+                  </div>
+                  <div className="flex justify-between text-[#8E8C85] pt-1 border-t border-[#22222E]">
+                    <span>Authenticated User:</span>
+                    <span className="text-[#E5C158] font-mono truncate max-w-[200px]">{user?.email}</span>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <div className="text-xs font-mono uppercase tracking-wider text-[#C5A059] flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span>Indian Delivery Address</span>
+                  <div className="text-xs font-mono uppercase tracking-wider text-[#C5A059] flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>Indian Delivery Address</span>
+                    </span>
+                    <span className="text-[10px] text-[#8E8C85]">Saves to Firebase</span>
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-mono text-[#8E8C85] block mb-1">Full Name</label>
+                    <label className="text-[10px] font-mono text-[#8E8C85] block mb-1">
+                      Full Name (Recipient)
+                    </label>
                     <input
                       type="text"
                       required
+                      placeholder="e.g. Vikramaditya Sen"
                       value={addressForm.fullName}
                       onChange={(e) => setAddressForm({ ...addressForm, fullName: e.target.value })}
                       className="w-full text-xs px-3 py-2.5 bg-[#121218] border border-[#282836] rounded text-white focus:outline-none focus:border-[#E5C158]"
@@ -246,11 +332,12 @@ export const CartDrawer: React.FC = () => {
 
                   <div>
                     <label className="text-[10px] font-mono text-[#8E8C85] block mb-1">
-                      Phone Number (For Tracking Updates)
+                      Phone Number (For Courier SMS Tracking)
                     </label>
                     <input
                       type="tel"
                       required
+                      placeholder="+91 98200 12345"
                       value={addressForm.phone}
                       onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
                       className="w-full text-xs px-3 py-2.5 bg-[#121218] border border-[#282836] rounded text-white focus:outline-none focus:border-[#E5C158]"
@@ -258,10 +345,13 @@ export const CartDrawer: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-mono text-[#8E8C85] block mb-1">Street Address</label>
+                    <label className="text-[10px] font-mono text-[#8E8C85] block mb-1">
+                      Street Address & House / Flat No.
+                    </label>
                     <textarea
                       rows={2}
                       required
+                      placeholder="e.g. Flat 12B, Palm Grove Residences, Indiranagar"
                       value={addressForm.streetAddress}
                       onChange={(e) => setAddressForm({ ...addressForm, streetAddress: e.target.value })}
                       className="w-full text-xs px-3 py-2 bg-[#121218] border border-[#282836] rounded text-white focus:outline-none focus:border-[#E5C158]"
@@ -274,6 +364,7 @@ export const CartDrawer: React.FC = () => {
                       <input
                         type="text"
                         required
+                        placeholder="e.g. Bengaluru"
                         value={addressForm.city}
                         onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
                         className="w-full text-xs px-3 py-2 bg-[#121218] border border-[#282836] rounded text-white focus:outline-none focus:border-[#E5C158]"
@@ -286,6 +377,7 @@ export const CartDrawer: React.FC = () => {
                         required
                         pattern="[0-9]{6}"
                         maxLength={6}
+                        placeholder="560038"
                         value={addressForm.pincode}
                         onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
                         className="w-full text-xs px-3 py-2 bg-[#121218] border border-[#282836] rounded text-white focus:outline-none focus:border-[#E5C158]"
@@ -298,6 +390,7 @@ export const CartDrawer: React.FC = () => {
                     <input
                       type="text"
                       required
+                      placeholder="e.g. Karnataka"
                       value={addressForm.state}
                       onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
                       className="w-full text-xs px-3 py-2 bg-[#121218] border border-[#282836] rounded text-white focus:outline-none focus:border-[#E5C158]"
@@ -307,7 +400,9 @@ export const CartDrawer: React.FC = () => {
 
                 {/* Payment selection */}
                 <div className="space-y-2 pt-2">
-                  <div className="text-xs font-mono uppercase tracking-wider text-[#C5A059]">Payment Method</div>
+                  <div className="text-xs font-mono uppercase tracking-wider text-[#C5A059]">
+                    Payment Authorization
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
@@ -339,9 +434,17 @@ export const CartDrawer: React.FC = () => {
                 <div className="pt-3">
                   <button
                     type="submit"
-                    className="w-full py-3.5 rounded text-xs font-bold uppercase tracking-[0.16em] bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] text-black shadow-lg"
+                    disabled={isSubmittingOrder}
+                    className="w-full py-3.5 rounded text-xs font-bold uppercase tracking-[0.16em] bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] text-black shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
                   >
-                    Confirm Subscription · ₹{cartTotal} / mo
+                    {isSubmittingOrder ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-black" />
+                        <span>Saving Order to Firestore...</span>
+                      </>
+                    ) : (
+                      <span>Place Subscription Order · ₹{cartTotal} / mo</span>
+                    )}
                   </button>
                   <button
                     type="button"
@@ -363,38 +466,40 @@ export const CartDrawer: React.FC = () => {
 
                 <div>
                   <span className="text-[11px] font-mono uppercase tracking-widest text-[#E5C158] block mb-1">
-                    Order Sealed & Dispatched
+                    Saved to Cloud Firestore
                   </span>
                   <h3 className="font-serif-display font-black text-2xl text-white">
-                    Welcome to the Circle
+                    Subscription Registered
                   </h3>
                   <p className="text-xs text-[#A8A59E] mt-1 max-w-xs mx-auto">
-                    Your October drop is being prepared on 300 GSM cotton paper in our workshop.
+                    Your order document has been securely written to the database under your authenticated account.
                   </p>
                 </div>
 
-                {/* Collector Dispatch Receipt Slip */}
+                {/* Real Dispatch Receipt Slip */}
                 <div className="p-5 rounded-xl bg-[#121218] border border-[#2B2B3A] text-left text-xs font-mono space-y-2.5">
                   <div className="flex justify-between border-b border-[#20202C] pb-2">
                     <span className="text-[#8E8C85]">Order ID:</span>
-                    <span className="text-[#F4F1EA] font-bold">{confirmedOrder.orderId}</span>
+                    <span className="text-[#F4F1EA] font-bold">{confirmedOrder.id}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-[#20202C] pb-2">
+                    <span className="text-[#8E8C85]">Customer:</span>
+                    <span className="text-white truncate max-w-[180px]">{confirmedOrder.customerName}</span>
                   </div>
                   <div className="flex justify-between border-b border-[#20202C] pb-2">
                     <span className="text-[#8E8C85]">Plan Tier:</span>
-                    <span className="text-white">{confirmedOrder.tierName}</span>
+                    <span className="text-white">{confirmedOrder.planName}</span>
                   </div>
                   <div className="flex justify-between border-b border-[#20202C] pb-2">
-                    <span className="text-[#8E8C85]">Amount Paid:</span>
-                    <span className="text-[#E5C158] font-bold">₹{confirmedOrder.totalAmount}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-[#20202C] pb-2">
-                    <span className="text-[#8E8C85]">Recipient:</span>
-                    <span className="text-white">{confirmedOrder.recipientName}</span>
+                    <span className="text-[#8E8C85]">Amount:</span>
+                    <span className="text-[#E5C158] font-bold">
+                      ₹{confirmedOrder.price} {confirmedOrder.currency}
+                    </span>
                   </div>
                   <div className="flex justify-between border-b border-[#20202C] pb-2">
                     <span className="text-[#8E8C85]">Destination:</span>
                     <span className="text-white">
-                      {confirmedOrder.city} ({confirmedOrder.pincode})
+                      {confirmedOrder.shippingAddress.city} ({confirmedOrder.shippingAddress.pincode})
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -408,7 +513,7 @@ export const CartDrawer: React.FC = () => {
                     onClick={handleClose}
                     className="w-full py-3 rounded text-xs font-bold uppercase tracking-wider bg-[#1A1A24] hover:bg-[#252534] border border-[#3A3A4C] text-white transition-colors"
                   >
-                    Return to Homepage
+                    Close & Return to Site
                   </button>
                 </div>
               </div>
@@ -421,7 +526,7 @@ export const CartDrawer: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-xs text-[#8E8C85] block">Monthly Total</span>
-                  <span className="text-xs text-[#34D399]">Tracked Indian Shipping Included</span>
+                  <span className="text-xs text-[#34D399]">Tracked Indian Air Express Included</span>
                 </div>
                 <div className="text-right">
                   <span className="font-mono-numbers text-2xl font-black text-[#F4F1EA]">
@@ -435,8 +540,17 @@ export const CartDrawer: React.FC = () => {
                 onClick={handleProceedToCheckout}
                 className="w-full py-3.5 px-4 rounded text-xs font-bold uppercase tracking-[0.16em] bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] hover:from-white hover:to-[#D4AF37] text-black transition-all flex items-center justify-center gap-2 shadow-lg"
               >
-                <span>Proceed to Dispatch Details</span>
-                <ArrowRight className="w-4 h-4" />
+                {!user ? (
+                  <>
+                    <Lock className="w-3.5 h-3.5 text-black" />
+                    <span>Sign In to Complete Order</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Proceed to Delivery Details</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
           )}

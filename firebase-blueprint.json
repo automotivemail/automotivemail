@@ -1,0 +1,178 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Authenticated collector profile and default shipping details",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The Firebase Auth user ID"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Collector email address"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Collector full name"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number for courier updates"
+        },
+        "shippingAddress": {
+          "type": "object",
+          "description": "Default postal shipping address across India"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Account creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last profile update timestamp"
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Physical art print subscription dispatches and orders",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique order identifier"
+        },
+        "userId": {
+          "type": "string",
+          "description": "The UID of the purchasing collector"
+        },
+        "userEmail": {
+          "type": "string",
+          "format": "email",
+          "description": "Customer email"
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Customer name on package"
+        },
+        "planId": {
+          "type": "string",
+          "enum": ["cars", "planes", "both"],
+          "description": "Purchased subscription tier"
+        },
+        "planName": {
+          "type": "string",
+          "description": "Title of the subscription tier"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Quantity of monthly subscriptions"
+        },
+        "price": {
+          "type": "number",
+          "description": "Total price charged in Indian Rupees"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["INR"],
+          "description": "Currency code"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["confirmed", "processing", "dispatched"],
+          "description": "Dispatch fulfillment status"
+        },
+        "shippingAddress": {
+          "type": "object",
+          "description": "Delivery address across India"
+        },
+        "isGift": {
+          "type": "boolean",
+          "description": "Whether this is a gift order"
+        },
+        "giftDetails": {
+          "type": "object",
+          "description": "Recipient name and wax-sealed dedication note"
+        },
+        "trackingNumber": {
+          "type": "string",
+          "description": "Air express carrier tracking code"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Order creation timestamp"
+        }
+      },
+      "required": ["id", "userId", "planId", "price", "currency", "status"]
+    },
+    "Subscription": {
+      "title": "Subscription",
+      "description": "Active monthly collector subscription record",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Subscription ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "The UID of the subscriber"
+        },
+        "planId": {
+          "type": "string",
+          "enum": ["cars", "planes", "both"],
+          "description": "Active tier identifier"
+        },
+        "planName": {
+          "type": "string",
+          "description": "Active tier title"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "paused", "cancelled"],
+          "description": "Subscription status"
+        },
+        "price": {
+          "type": "number",
+          "description": "Recurring monthly amount in INR"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["INR"],
+          "description": "Currency code"
+        },
+        "nextDispatchDate": {
+          "type": "string",
+          "description": "Next scheduled physical drop dispatch date"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Subscription start timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last status modification timestamp"
+        }
+      },
+      "required": ["id", "userId", "planId", "status", "price"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Private collector profile data accessible only by the owner"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Order records queryable and readable only by the authenticated owner"
+    },
+    "/subscriptions/{subscriptionId}": {
+      "schema": "Subscription",
+      "description": "Collector monthly subscriptions queryable and readable only by the owner"
+    }
+  }
+}

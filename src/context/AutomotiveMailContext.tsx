@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { SUBSCRIPTION_PLANS, PlanTier } from '../data/automotiveMailData';
+import { useAuth, UserShippingAddress } from './AuthContext';
+import { collection, query, where, onSnapshot, doc, setDoc, orderBy, getDocs } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../firebase';
 
 export interface CartItem {
   plan: PlanTier;
@@ -9,25 +12,39 @@ export interface CartItem {
   giftMessage?: string;
 }
 
-export interface UserAddress {
-  fullName: string;
-  phone: string;
-  streetAddress: string;
-  city: string;
-  state: string;
-  pincode: string;
-}
-
-export interface OrderConfirmation {
-  orderId: string;
-  date: string;
-  tierName: string;
-  totalAmount: number;
-  recipientName: string;
-  city: string;
-  pincode: string;
+export interface FirestoreOrder {
+  id: string;
+  userId: string;
+  userEmail: string;
+  customerName: string;
+  planId: 'cars' | 'planes' | 'both';
+  planName: string;
+  quantity: number;
+  price: number;
+  currency: 'INR';
+  status: 'confirmed' | 'processing' | 'dispatched';
+  shippingAddress: UserShippingAddress;
+  isGift: boolean;
+  giftDetails?: {
+    recipient: string;
+    note: string;
+  };
   trackingNumber: string;
   estimatedDelivery: string;
+  createdAt: string;
+}
+
+export interface FirestoreSubscription {
+  id: string;
+  userId: string;
+  planId: 'cars' | 'planes' | 'both';
+  planName: string;
+  status: 'active' | 'paused' | 'cancelled';
+  price: number;
+  currency: 'INR';
+  nextDispatchDate: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AutomotiveMailContextType {
@@ -43,54 +60,92 @@ interface AutomotiveMailContextType {
   setIsAccountOpen: (open: boolean) => void;
   isDropsModalOpen: boolean;
   setIsDropsModalOpen: (open: boolean) => void;
-  userAddress: UserAddress;
-  setUserAddress: React.Dispatch<React.SetStateAction<UserAddress>>;
-  activeSubscription: {
-    tierId: string;
-    status: string;
-    nextDispatchDate: string;
-    memberId: string;
-  } | null;
-  lastOrder: OrderConfirmation | null;
-  completeCheckout: (details: { address: UserAddress; paymentMethod: string; giftDetails?: { recipient: string; note: string } }) => OrderConfirmation;
+  userOrders: FirestoreOrder[];
+  ordersLoading: boolean;
+  userSubscription: FirestoreSubscription | null;
+  subscriptionLoading: boolean;
+  lastOrder: FirestoreOrder | null;
+  isSubmittingOrder: boolean;
+  completeCheckout: (details: {
+    address: UserShippingAddress;
+    paymentMethod: string;
+    giftDetails?: { recipient: string; note: string };
+  }) => Promise<FirestoreOrder>;
 }
 
 const AutomotiveMailContext = createContext<AutomotiveMailContextType | undefined>(undefined);
 
 export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [cart, setCart] = useState<CartItem[]>([
-    {
-      plan: SUBSCRIPTION_PLANS.find((p) => p.id === 'both') || SUBSCRIPTION_PLANS[1],
-      quantity: 1,
-      isGift: false,
-    },
-  ]);
+  const { user, userProfile, saveShippingAddress, openAuthModal } = useAuth();
+
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isDropsModalOpen, setIsDropsModalOpen] = useState(false);
+  const [userOrders, setUserOrders] = useState<FirestoreOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [userSubscription, setUserSubscription] = useState<FirestoreSubscription | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [lastOrder, setLastOrder] = useState<FirestoreOrder | null>(null);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
-  const [userAddress, setUserAddress] = useState<UserAddress>({
-    fullName: 'Arjun Mehta',
-    phone: '+91 98201 54321',
-    streetAddress: 'Flat 402, Sea Green Apartments, Worli Sea Face',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    pincode: '400018',
-  });
+  // Sync real orders from Firestore when authenticated
+  useEffect(() => {
+    if (!user) {
+      setUserOrders([]);
+      setUserSubscription(null);
+      setOrdersLoading(false);
+      setSubscriptionLoading(false);
+      return;
+    }
 
-  const [activeSubscription, setActiveSubscription] = useState<{
-    tierId: string;
-    status: string;
-    nextDispatchDate: string;
-    memberId: string;
-  } | null>({
-    tierId: 'both',
-    status: 'Active · Dispatching Monthly',
-    nextDispatchDate: '18 October 2026',
-    memberId: 'IN-AM-7409',
-  });
+    setOrdersLoading(true);
+    setSubscriptionLoading(true);
 
-  const [lastOrder, setLastOrder] = useState<OrderConfirmation | null>(null);
+    const ordersQuery = query(collection(db, 'orders'), where('userId', '==', user.uid));
+    const unsubscribeOrders = onSnapshot(
+      ordersQuery,
+      (snapshot) => {
+        const ordersData: FirestoreOrder[] = [];
+        snapshot.forEach((doc) => {
+          ordersData.push(doc.data() as FirestoreOrder);
+        });
+        // Sort newest first
+        ordersData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setUserOrders(ordersData);
+        setOrdersLoading(false);
+      },
+      (error) => {
+        console.error('Error listening to user orders:', error);
+        setOrdersLoading(false);
+      }
+    );
+
+    const subscriptionsQuery = query(collection(db, 'subscriptions'), where('userId', '==', user.uid));
+    const unsubscribeSubscriptions = onSnapshot(
+      subscriptionsQuery,
+      (snapshot) => {
+        let activeSub: FirestoreSubscription | null = null;
+        snapshot.forEach((doc) => {
+          const sub = doc.data() as FirestoreSubscription;
+          if (sub.status === 'active') {
+            activeSub = sub;
+          }
+        });
+        setUserSubscription(activeSub);
+        setSubscriptionLoading(false);
+      },
+      (error) => {
+        console.error('Error listening to user subscription:', error);
+        setSubscriptionLoading(false);
+      }
+    );
+
+    return () => {
+      unsubscribeOrders();
+      unsubscribeSubscriptions();
+    };
+  }, [user]);
 
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
   const cartTotal = cart.reduce((acc, item) => acc + item.plan.price * item.quantity, 0);
@@ -106,7 +161,15 @@ export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = (
       }
       return [...prev, { plan: selectedPlan, quantity: 1, isGift }];
     });
-    setIsCartOpen(true);
+
+    // If visitor is not logged in, prompt authentication while preserving the selection
+    if (!user) {
+      openAuthModal('login', () => {
+        setIsCartOpen(true);
+      });
+    } else {
+      setIsCartOpen(true);
+    }
   };
 
   const removeFromCart = (planId: string) => {
@@ -117,39 +180,80 @@ export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = (
     setCart([]);
   };
 
-  const completeCheckout = ({
+  const completeCheckout = async ({
     address,
     giftDetails,
   }: {
-    address: UserAddress;
+    address: UserShippingAddress;
     paymentMethod: string;
     giftDetails?: { recipient: string; note: string };
-  }): OrderConfirmation => {
-    const planName = cart.length > 0 ? cart[0].plan.name : 'Both Worlds';
-    const amount = cartTotal || 759;
-    const trackingCode = `BLUEDART-AM-${Math.floor(100000 + Math.random() * 900000)}`;
-    const newOrder: OrderConfirmation = {
-      orderId: `AM-${Math.floor(1000 + Math.random() * 9000)}`,
-      date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-      tierName: planName,
-      totalAmount: amount,
-      recipientName: giftDetails?.recipient || address.fullName,
-      city: address.city,
-      pincode: address.pincode,
-      trackingNumber: trackingCode,
-      estimatedDelivery: '3 to 5 business days (Tracked Air Express)',
-    };
+  }): Promise<FirestoreOrder> => {
+    if (!user) {
+      throw new Error('Customer authentication is required to place an order.');
+    }
+    if (isSubmittingOrder) {
+      throw new Error('Order submission is already in progress.');
+    }
 
-    setLastOrder(newOrder);
-    setUserAddress(address);
-    setActiveSubscription({
-      tierId: cart[0]?.plan.id || 'both',
-      status: 'Active · Express Dispatched',
-      nextDispatchDate: '18 October 2026',
-      memberId: `IN-AM-${Math.floor(1000 + Math.random() * 9000)}`,
-    });
-    setCart([]);
-    return newOrder;
+    setIsSubmittingOrder(true);
+    try {
+      const selectedPlan = cart.length > 0 ? cart[0].plan : SUBSCRIPTION_PLANS[1];
+      const amount = cartTotal || selectedPlan.price;
+      const orderId = `AM-${Date.now().toString().slice(-6)}`;
+      const trackingCode = `BLUEDART-AM-${Math.floor(100000 + Math.random() * 900000)}`;
+
+      const newOrder: FirestoreOrder = {
+        id: orderId,
+        userId: user.uid,
+        userEmail: user.email || '',
+        customerName: address.fullName,
+        planId: selectedPlan.id,
+        planName: selectedPlan.name,
+        quantity: cart.length > 0 ? cart[0].quantity : 1,
+        price: amount,
+        currency: 'INR',
+        status: 'confirmed',
+        shippingAddress: address,
+        isGift: Boolean(giftDetails?.recipient),
+        giftDetails: giftDetails?.recipient ? giftDetails : undefined,
+        trackingNumber: trackingCode,
+        estimatedDelivery: '3 to 5 business days (Tracked Air Express across India)',
+        createdAt: new Date().toISOString(),
+      };
+
+      // 1. Save order to Firestore
+      const orderDocRef = doc(db, 'orders', orderId);
+      await setDoc(orderDocRef, newOrder);
+
+      // 2. Save/update user subscription in Firestore
+      const subscriptionId = `sub_${user.uid}_${selectedPlan.id}`;
+      const newSubscription: FirestoreSubscription = {
+        id: subscriptionId,
+        userId: user.uid,
+        planId: selectedPlan.id,
+        planName: selectedPlan.name,
+        status: 'active',
+        price: selectedPlan.price,
+        currency: 'INR',
+        nextDispatchDate: '18 November 2026',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      const subDocRef = doc(db, 'subscriptions', subscriptionId);
+      await setDoc(subDocRef, newSubscription);
+
+      // 3. Save shipping address to user profile
+      await saveShippingAddress(address);
+
+      setLastOrder(newOrder);
+      setCart([]);
+      return newOrder;
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'orders');
+      throw err;
+    } finally {
+      setIsSubmittingOrder(false);
+    }
   };
 
   return (
@@ -167,10 +271,12 @@ export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = (
         setIsAccountOpen,
         isDropsModalOpen,
         setIsDropsModalOpen,
-        userAddress,
-        setUserAddress,
-        activeSubscription,
+        userOrders,
+        ordersLoading,
+        userSubscription,
+        subscriptionLoading,
         lastOrder,
+        isSubmittingOrder,
         completeCheckout,
       }}
     >

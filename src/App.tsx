@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { AuthProvider } from './context/AuthContext';
 import { AutomotiveMailProvider } from './context/AutomotiveMailContext';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
@@ -18,49 +19,53 @@ import { Footer } from './components/Footer';
 import { DropsModal } from './components/DropsModal';
 import { CartDrawer } from './components/CartDrawer';
 import { AccountModal } from './components/AccountModal';
+import { AuthModal } from './components/AuthModal';
 
 export default function App() {
   return (
-    <AutomotiveMailProvider>
-      <div className="min-h-screen bg-[#08080A] text-[#E6E4DF] selection:bg-[#C5A059]/30 selection:text-[#F3E5AB]">
-        {/* Header - Fixed dark nav */}
-        <Header />
+    <AuthProvider>
+      <AutomotiveMailProvider>
+        <div className="min-h-screen bg-[#08080A] text-[#E6E4DF] selection:bg-[#C5A059]/30 selection:text-[#F3E5AB]">
+          {/* Header - Fixed dark nav */}
+          <Header />
 
-        {/* Main 8 Homepage Sections */}
-        <main>
-          {/* 1. Hero */}
-          <Hero />
+          {/* Main 8 Homepage Sections */}
+          <main>
+            {/* 1. Hero */}
+            <Hero />
 
-          {/* 2. Subscription Plans */}
-          <SubscriptionPlans />
+            {/* 2. Subscription Plans */}
+            <SubscriptionPlans />
 
-          {/* 3. Enthusiast Voices */}
-          <EnthusiastVoices />
+            {/* 3. Enthusiast Voices */}
+            <EnthusiastVoices />
 
-          {/* 4. The Legendary Subject */}
-          <LegendarySubject />
+            {/* 4. The Legendary Subject */}
+            <LegendarySubject />
 
-          {/* 5. How It Works */}
-          <HowItWorks />
+            {/* 5. How It Works */}
+            <HowItWorks />
 
-          {/* 6. The Guarantee */}
-          <TheGuarantee />
+            {/* 6. The Guarantee */}
+            <TheGuarantee />
 
-          {/* 7. The Nostalgic Mission */}
-          <NostalgicMission />
+            {/* 7. The Nostalgic Mission */}
+            <NostalgicMission />
 
-          {/* 8. FAQ */}
-          <FAQ />
-        </main>
+            {/* 8. FAQ */}
+            <FAQ />
+          </main>
 
-        {/* Footer */}
-        <Footer />
+          {/* Footer */}
+          <Footer />
 
-        {/* Interactive Modals and Drawers */}
-        <DropsModal />
-        <CartDrawer />
-        <AccountModal />
-      </div>
-    </AutomotiveMailProvider>
+          {/* Interactive Modals and Drawers */}
+          <DropsModal />
+          <CartDrawer />
+          <AccountModal />
+          <AuthModal />
+        </div>
+      </AutomotiveMailProvider>
+    </AuthProvider>
   );
 }
