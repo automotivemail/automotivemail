@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { SUBSCRIPTION_PLANS, PlanTier } from '../data/automotiveMailData';
 import { useAuth, UserShippingAddress } from './AuthContext';
-import { collection, query, where, onSnapshot, doc, setDoc, orderBy, getDocs } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { collection, query, where, onSnapshot, doc, setDoc } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType, auth } from '../firebase';
 
 export interface CartItem {
   plan: PlanTier;
@@ -52,10 +52,13 @@ interface AutomotiveMailContextType {
   cartCount: number;
   cartTotal: number;
   addToCart: (planId: 'cars' | 'planes' | 'both', isGift?: boolean) => void;
+  subscribeNow: (planId?: 'cars' | 'planes' | 'both', isGift?: boolean) => void;
   removeFromCart: (planId: string) => void;
   clearCart: () => void;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
+  cartDrawerStep: 'cart' | 'checkout' | 'success';
+  setCartDrawerStep: (step: 'cart' | 'checkout' | 'success') => void;
   isAccountOpen: boolean;
   setIsAccountOpen: (open: boolean) => void;
   isDropsModalOpen: boolean;
@@ -76,10 +79,11 @@ interface AutomotiveMailContextType {
 const AutomotiveMailContext = createContext<AutomotiveMailContextType | undefined>(undefined);
 
 export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, userProfile, saveShippingAddress, openAuthModal } = useAuth();
+  const { user, saveShippingAddress, openAuthModal } = useAuth();
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [cartDrawerStep, setCartDrawerStep] = useState<'cart' | 'checkout' | 'success'>('cart');
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isDropsModalOpen, setIsDropsModalOpen] = useState(false);
   const [userOrders, setUserOrders] = useState<FirestoreOrder[]>([]);
@@ -107,8 +111,8 @@ export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = (
       ordersQuery,
       (snapshot) => {
         const ordersData: FirestoreOrder[] = [];
-        snapshot.forEach((doc) => {
-          ordersData.push(doc.data() as FirestoreOrder);
+        snapshot.forEach((docSnap) => {
+          ordersData.push(docSnap.data() as FirestoreOrder);
         });
         // Sort newest first
         ordersData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -126,8 +130,8 @@ export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = (
       subscriptionsQuery,
       (snapshot) => {
         let activeSub: FirestoreSubscription | null = null;
-        snapshot.forEach((doc) => {
-          const sub = doc.data() as FirestoreSubscription;
+        snapshot.forEach((docSnap) => {
+          const sub = docSnap.data() as FirestoreSubscription;
           if (sub.status === 'active') {
             activeSub = sub;
           }
@@ -162,12 +166,35 @@ export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = (
       return [...prev, { plan: selectedPlan, quantity: 1, isGift }];
     });
 
-    // If visitor is not logged in, prompt authentication while preserving the selection
     if (!user) {
       openAuthModal('login', () => {
+        setCartDrawerStep('cart');
         setIsCartOpen(true);
       });
     } else {
+      setCartDrawerStep('cart');
+      setIsCartOpen(true);
+    }
+  };
+
+  /**
+   * Directly triggers subscription checkout flow linked to Firestore
+   * Ensures only authenticated users can trigger the transaction.
+   */
+  const subscribeNow = (planId: 'cars' | 'planes' | 'both' = 'both', isGift = false) => {
+    const selectedPlan = SUBSCRIPTION_PLANS.find((p) => p.id === planId) || SUBSCRIPTION_PLANS[1];
+    // Set active item for checkout
+    setCart([{ plan: selectedPlan, quantity: 1, isGift }]);
+
+    if (!user) {
+      // Require authentication first, then resume directly to checkout
+      openAuthModal('login', () => {
+        setCartDrawerStep('checkout');
+        setIsCartOpen(true);
+      });
+    } else {
+      // Authenticated user proceeds directly to checkout step
+      setCartDrawerStep('checkout');
       setIsCartOpen(true);
     }
   };
@@ -188,11 +215,12 @@ export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = (
     paymentMethod: string;
     giftDetails?: { recipient: string; note: string };
   }): Promise<FirestoreOrder> => {
-    if (!user) {
-      throw new Error('Customer authentication is required to place an order.');
+    // HARD ENFORCEMENT: Only authenticated users can write orders
+    if (!auth.currentUser || !user) {
+      throw new Error('Authentication required: You must be signed in with Firebase to place an order.');
     }
     if (isSubmittingOrder) {
-      throw new Error('Order submission is already in progress.');
+      throw new Error('Order submission is already processing.');
     }
 
     setIsSubmittingOrder(true);
@@ -221,11 +249,11 @@ export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = (
         createdAt: new Date().toISOString(),
       };
 
-      // 1. Save order to Firestore
+      // 1. Save order to Firestore 'orders' collection
       const orderDocRef = doc(db, 'orders', orderId);
       await setDoc(orderDocRef, newOrder);
 
-      // 2. Save/update user subscription in Firestore
+      // 2. Save active subscription to Firestore 'subscriptions' collection
       const subscriptionId = `sub_${user.uid}_${selectedPlan.id}`;
       const newSubscription: FirestoreSubscription = {
         id: subscriptionId,
@@ -242,7 +270,7 @@ export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = (
       const subDocRef = doc(db, 'subscriptions', subscriptionId);
       await setDoc(subDocRef, newSubscription);
 
-      // 3. Save shipping address to user profile
+      // 3. Save shipping address to user profile in Firestore
       await saveShippingAddress(address);
 
       setLastOrder(newOrder);
@@ -263,10 +291,13 @@ export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = (
         cartCount,
         cartTotal,
         addToCart,
+        subscribeNow,
         removeFromCart,
         clearCart,
         isCartOpen,
         setIsCartOpen,
+        cartDrawerStep,
+        setCartDrawerStep,
         isAccountOpen,
         setIsAccountOpen,
         isDropsModalOpen,

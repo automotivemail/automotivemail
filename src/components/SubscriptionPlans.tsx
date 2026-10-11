@@ -4,7 +4,7 @@ import { useAutomotiveMail } from '../context/AutomotiveMailContext';
 import { Check, ShieldCheck, Sparkles, Image as ImageIcon, FileText, Compass, Camera, BookOpen } from 'lucide-react';
 
 export const SubscriptionPlans: React.FC = () => {
-  const { addToCart, setIsDropsModalOpen } = useAutomotiveMail();
+  const { addToCart, subscribeNow, setIsDropsModalOpen } = useAutomotiveMail();
 
   const getIncludeIcon = (key: string) => {
     switch (key) {
@@ -147,8 +147,8 @@ export const SubscriptionPlans: React.FC = () => {
                 {/* Direct Action Button */}
                 <div className="pt-2">
                   <button
-                    onClick={() => addToCart(plan.id)}
-                    className={`w-full py-3.5 px-4 rounded text-xs font-bold uppercase tracking-[0.16em] transition-all duration-200 ${
+                    onClick={() => subscribeNow(plan.id)}
+                    className={`w-full py-3.5 px-4 rounded text-xs font-bold uppercase tracking-[0.16em] transition-all duration-200 cursor-pointer ${
                       isHighlighted
                         ? 'bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] hover:from-[#FFFFFF] hover:to-[#D4AF37] text-[#0A0A0C] shadow-[0_4px_16px_rgba(229,193,88,0.25)]'
                         : 'bg-[#181820] hover:bg-[#22222D] text-[#E6E4DF] border border-[#2F2F3D] hover:border-[#C5A059]/50'
@@ -176,13 +176,13 @@ export const SubscriptionPlans: React.FC = () => {
                 Gifting a collector in India?
               </h4>
               <p className="text-xs text-[#8E8C85] mt-0.5">
-                Send a 3, 6, or 12-month curated gift subscription with a custom wax-sealed dedication note.
+                Send a curated gift subscription with a custom wax-sealed dedication note.
               </p>
             </div>
           </div>
           <button
-            onClick={() => addToCart('both', true)}
-            className="px-5 py-2.5 rounded bg-[#1C1C24] hover:bg-[#252532] border border-[#3A3A48] text-xs font-semibold uppercase tracking-wider text-[#F4F1EA] transition-colors whitespace-nowrap"
+            onClick={() => subscribeNow('both', true)}
+            className="px-5 py-2.5 rounded bg-[#1C1C24] hover:bg-[#252532] border border-[#3A3A48] text-xs font-semibold uppercase tracking-wider text-[#F4F1EA] transition-colors whitespace-nowrap cursor-pointer"
           >
             Gift This Subscription
           </button>

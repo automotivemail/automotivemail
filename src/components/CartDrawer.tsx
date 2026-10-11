@@ -16,6 +16,7 @@ import {
   Lock,
   Loader2,
   AlertCircle,
+  FileCheck,
 } from 'lucide-react';
 
 export const CartDrawer: React.FC = () => {
@@ -26,6 +27,8 @@ export const CartDrawer: React.FC = () => {
     removeFromCart,
     isCartOpen,
     setIsCartOpen,
+    cartDrawerStep,
+    setCartDrawerStep,
     completeCheckout,
     lastOrder,
     isSubmittingOrder,
@@ -33,7 +36,6 @@ export const CartDrawer: React.FC = () => {
 
   const { user, userProfile, openAuthModal } = useAuth();
 
-  const [step, setStep] = useState<'cart' | 'checkout' | 'success'>('cart');
   const [addressForm, setAddressForm] = useState<UserShippingAddress>({
     fullName: '',
     phone: '',
@@ -69,17 +71,18 @@ export const CartDrawer: React.FC = () => {
     if (!user) {
       // Require login before checkout, preserving the cart
       openAuthModal('login', () => {
-        setStep('checkout');
+        setCartDrawerStep('checkout');
       });
       return;
     }
-    setStep('checkout');
+    setCartDrawerStep('checkout');
   };
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
+    // Hard check: user must be authenticated
     if (!user) {
       openAuthModal('login');
       return;
@@ -104,7 +107,7 @@ export const CartDrawer: React.FC = () => {
         giftDetails: isGiftMode ? { recipient: giftRecipient, note: giftNote } : undefined,
       });
       setConfirmedOrder(order);
-      setStep('success');
+      setCartDrawerStep('success');
     } catch (err: any) {
       console.error('Order creation error:', err);
       setErrorMsg(err.message || 'Failed to place order in database. Please try again.');
@@ -114,7 +117,7 @@ export const CartDrawer: React.FC = () => {
   const handleClose = () => {
     setIsCartOpen(false);
     setTimeout(() => {
-      setStep('cart');
+      setCartDrawerStep('cart');
       setErrorMsg(null);
     }, 300);
   };
@@ -129,14 +132,14 @@ export const CartDrawer: React.FC = () => {
               <AutomotiveMailLogo variant="stamp-only" />
               <div>
                 <h3 className="font-serif-display font-bold text-sm uppercase tracking-wide text-white">
-                  {step === 'cart' && 'Collector Cart'}
-                  {step === 'checkout' && 'Indian Express Dispatch'}
-                  {step === 'success' && 'Order Stored in Firestore'}
+                  {cartDrawerStep === 'cart' && 'Collector Cart'}
+                  {cartDrawerStep === 'checkout' && 'Indian Express Checkout'}
+                  {cartDrawerStep === 'success' && 'Order Saved to Firestore'}
                 </h3>
                 <span className="text-[11px] font-mono text-[#8E8C85]">
-                  {step === 'cart' && `${cartCount} Subscription Item${cartCount === 1 ? '' : 's'}`}
-                  {step === 'checkout' && (user ? `Collector: ${user.email}` : 'Sign in required')}
-                  {step === 'success' && 'Archived in Database'}
+                  {cartDrawerStep === 'cart' && `${cartCount} Subscription Item${cartCount === 1 ? '' : 's'}`}
+                  {cartDrawerStep === 'checkout' && (user ? `Authenticated: ${user.email}` : 'Sign in required')}
+                  {cartDrawerStep === 'success' && 'Archived in Database'}
                 </span>
               </div>
             </div>
@@ -160,7 +163,7 @@ export const CartDrawer: React.FC = () => {
             )}
 
             {/* STEP 1: CART VIEW */}
-            {step === 'cart' && (
+            {cartDrawerStep === 'cart' && (
               <>
                 {cart.length === 0 ? (
                   <div className="text-center py-16 space-y-4">
@@ -286,24 +289,37 @@ export const CartDrawer: React.FC = () => {
             )}
 
             {/* STEP 2: REAL CHECKOUT VIEW */}
-            {step === 'checkout' && (
+            {cartDrawerStep === 'checkout' && (
               <form onSubmit={handleSubmitOrder} className="space-y-5">
-                <div className="p-3.5 rounded-lg bg-[#14141C] border border-[#242432] text-xs">
-                  <div className="flex justify-between text-[#8E8C85] mb-1">
+                {/* Security and authentication banner */}
+                <div className="p-3.5 rounded-lg bg-[#14141C] border border-[#242432] text-xs space-y-1.5">
+                  <div className="flex justify-between text-[#8E8C85]">
                     <span>Selected Plan:</span>
                     <span className="text-white font-medium">{cart[0]?.plan.name || 'Both Worlds'}</span>
                   </div>
-                  <div className="flex justify-between text-[#8E8C85] mb-1">
+                  <div className="flex justify-between text-[#8E8C85]">
                     <span>Monthly Subscription:</span>
                     <span className="text-white font-mono">₹{cartTotal}</span>
                   </div>
-                  <div className="flex justify-between text-[#8E8C85] mb-1">
+                  <div className="flex justify-between text-[#8E8C85]">
                     <span>Pan-India Shipping:</span>
                     <span className="text-[#34D399] font-mono">FREE (Air Express)</span>
                   </div>
-                  <div className="flex justify-between text-[#8E8C85] pt-1 border-t border-[#22222E]">
-                    <span>Authenticated User:</span>
-                    <span className="text-[#E5C158] font-mono truncate max-w-[200px]">{user?.email}</span>
+                  <div className="flex items-center justify-between pt-1.5 border-t border-[#22222E]">
+                    <span className="text-[11px] font-mono text-[#8E8C85]">Firestore Auth Status:</span>
+                    {user ? (
+                      <span className="text-[#34D399] font-mono text-[11px] flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#34D399]" /> Verified ({user.email})
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => openAuthModal('login')}
+                        className="text-[#E5C158] font-mono text-[11px] underline flex items-center gap-1"
+                      >
+                        <Lock className="w-3 h-3" /> Sign in required
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -313,7 +329,7 @@ export const CartDrawer: React.FC = () => {
                       <MapPin className="w-3.5 h-3.5" />
                       <span>Indian Delivery Address</span>
                     </span>
-                    <span className="text-[10px] text-[#8E8C85]">Saves to Firebase</span>
+                    <span className="text-[10px] text-[#8E8C85]">Saves to Firestore</span>
                   </div>
 
                   <div>
@@ -440,7 +456,7 @@ export const CartDrawer: React.FC = () => {
                     {isSubmittingOrder ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin text-black" />
-                        <span>Saving Order to Firestore...</span>
+                        <span>Recording in Firestore 'orders'...</span>
                       </>
                     ) : (
                       <span>Place Subscription Order · ₹{cartTotal} / mo</span>
@@ -448,31 +464,32 @@ export const CartDrawer: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setStep('cart')}
+                    onClick={() => setCartDrawerStep('cart')}
                     className="w-full py-2 text-xs text-[#8E8C85] hover:text-white mt-1"
                   >
-                    ← Back to Cart
+                    ← Review Included Prints
                   </button>
                 </div>
               </form>
             )}
 
             {/* STEP 3: ORDER SUCCESS CONFIRMATION SLIP */}
-            {step === 'success' && confirmedOrder && (
+            {cartDrawerStep === 'success' && confirmedOrder && (
               <div className="space-y-6 text-center py-4 animate-in zoom-in-95 duration-200">
                 <div className="w-16 h-16 rounded-full bg-[#064E3B]/30 border border-[#059669] flex items-center justify-center mx-auto text-[#34D399]">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
 
                 <div>
-                  <span className="text-[11px] font-mono uppercase tracking-widest text-[#E5C158] block mb-1">
-                    Saved to Cloud Firestore
-                  </span>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-[#0A2E1D] border border-[#059669]/50 text-[10px] font-mono text-[#34D399] uppercase tracking-wider mb-2">
+                    <FileCheck className="w-3.5 h-3.5" />
+                    <span>Saved in Firestore /orders/{confirmedOrder.id}</span>
+                  </div>
                   <h3 className="font-serif-display font-black text-2xl text-white">
                     Subscription Registered
                   </h3>
                   <p className="text-xs text-[#A8A59E] mt-1 max-w-xs mx-auto">
-                    Your order document has been securely written to the database under your authenticated account.
+                    Your physical dispatch order has been securely written to Cloud Firestore under your account.
                   </p>
                 </div>
 
@@ -483,7 +500,11 @@ export const CartDrawer: React.FC = () => {
                     <span className="text-[#F4F1EA] font-bold">{confirmedOrder.id}</span>
                   </div>
                   <div className="flex justify-between border-b border-[#20202C] pb-2">
-                    <span className="text-[#8E8C85]">Customer:</span>
+                    <span className="text-[#8E8C85]">Authenticated UID:</span>
+                    <span className="text-white truncate max-w-[170px] text-[10px]">{confirmedOrder.userId}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-[#20202C] pb-2">
+                    <span className="text-[#8E8C85]">Customer Name:</span>
                     <span className="text-white truncate max-w-[180px]">{confirmedOrder.customerName}</span>
                   </div>
                   <div className="flex justify-between border-b border-[#20202C] pb-2">
@@ -491,7 +512,7 @@ export const CartDrawer: React.FC = () => {
                     <span className="text-white">{confirmedOrder.planName}</span>
                   </div>
                   <div className="flex justify-between border-b border-[#20202C] pb-2">
-                    <span className="text-[#8E8C85]">Amount:</span>
+                    <span className="text-[#8E8C85]">Amount Paid:</span>
                     <span className="text-[#E5C158] font-bold">
                       ₹{confirmedOrder.price} {confirmedOrder.currency}
                     </span>
@@ -521,7 +542,7 @@ export const CartDrawer: React.FC = () => {
           </div>
 
           {/* Drawer Footer Actions (When on cart view with items) */}
-          {step === 'cart' && cart.length > 0 && (
+          {cartDrawerStep === 'cart' && cart.length > 0 && (
             <div className="p-5 border-t border-[#1E1E28] bg-[#111117] space-y-3">
               <div className="flex items-center justify-between">
                 <div>

@@ -4,7 +4,7 @@ import { useAutomotiveMail } from '../context/AutomotiveMailContext';
 import { Mail, MapPin, Instagram, Youtube, Twitter } from 'lucide-react';
 
 export const Footer: React.FC = () => {
-  const { setIsDropsModalOpen } = useAutomotiveMail();
+  const { setIsDropsModalOpen, subscribeNow } = useAutomotiveMail();
 
   return (
     <footer className="relative bg-[#060608] border-t border-[#1C1C22] text-[#B5B3AD] pt-20 pb-12">
@@ -22,12 +22,13 @@ export const Footer: React.FC = () => {
             </p>
 
             <div className="pt-2">
-              <a
-                href="#plans"
-                className="inline-flex items-center px-6 py-3 rounded text-xs font-bold uppercase tracking-[0.16em] text-[#0A0A0C] bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] hover:from-[#FFFFFF] hover:to-[#D4AF37] transition-all shadow-[0_4px_16px_rgba(229,193,88,0.25)]"
+              <button
+                type="button"
+                onClick={() => subscribeNow('both')}
+                className="inline-flex items-center px-6 py-3 rounded text-xs font-bold uppercase tracking-[0.16em] text-[#0A0A0C] bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] hover:from-[#FFFFFF] hover:to-[#D4AF37] transition-all shadow-[0_4px_16px_rgba(229,193,88,0.25)] cursor-pointer"
               >
                 Subscribe Now — From ₹459/mo
-              </a>
+              </button>
             </div>
 
             <div className="flex items-center gap-3 pt-2 text-xs font-mono text-[#8E8C85]">

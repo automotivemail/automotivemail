@@ -5,7 +5,7 @@ import { ArrowDown, Sparkles, ShieldCheck, Mail, MapPin } from 'lucide-react';
 import heroCarImage from '../assets/images/hero_automotive_mail_1791615857706.jpg';
 
 export const Hero: React.FC = () => {
-  const { setIsDropsModalOpen, addToCart } = useAutomotiveMail();
+  const { setIsDropsModalOpen, subscribeNow } = useAutomotiveMail();
 
   return (
     <section className="relative min-h-[92vh] sm:min-h-screen flex items-center justify-center overflow-hidden bg-[#08080A] pt-24 pb-16">
@@ -52,16 +52,17 @@ export const Hero: React.FC = () => {
 
         {/* Two CTAs: Subscribe Now and View Drops */}
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto justify-center mb-12">
-          <a
-            href="#plans"
-            className="w-full sm:w-auto px-8 py-3.5 text-xs sm:text-sm font-bold uppercase tracking-[0.18em] text-[#0A0A0C] bg-gradient-to-r from-[#FFF1C5] via-[#E5C158] to-[#C5A059] hover:from-[#FFFFFF] hover:to-[#D4AF37] rounded transition-all shadow-[0_4px_24px_rgba(229,193,88,0.3)] hover:shadow-[0_6px_32px_rgba(229,193,88,0.5)] transform hover:-translate-y-0.5"
+          <button
+            type="button"
+            onClick={() => subscribeNow('both')}
+            className="w-full sm:w-auto px-8 py-3.5 text-xs sm:text-sm font-bold uppercase tracking-[0.18em] text-[#0A0A0C] bg-gradient-to-r from-[#FFF1C5] via-[#E5C158] to-[#C5A059] hover:from-[#FFFFFF] hover:to-[#D4AF37] rounded transition-all shadow-[0_4px_24px_rgba(229,193,88,0.3)] hover:shadow-[0_6px_32px_rgba(229,193,88,0.5)] transform hover:-translate-y-0.5 cursor-pointer"
           >
             Subscribe Now
-          </a>
+          </button>
 
           <button
             onClick={() => setIsDropsModalOpen(true)}
-            className="w-full sm:w-auto px-8 py-3.5 text-xs sm:text-sm font-bold uppercase tracking-[0.18em] text-[#F5F2EB] bg-[#121216]/80 hover:bg-[#1C1C24] border border-[#C5A059]/40 hover:border-[#E5C158] rounded backdrop-blur-md transition-all shadow-md transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
+            className="w-full sm:w-auto px-8 py-3.5 text-xs sm:text-sm font-bold uppercase tracking-[0.18em] text-[#F5F2EB] bg-[#121216]/80 hover:bg-[#1C1C24] border border-[#C5A059]/40 hover:border-[#E5C158] rounded backdrop-blur-md transition-all shadow-md transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group cursor-pointer"
           >
             <span>View Drops</span>
             <span className="text-[#E5C158] group-hover:translate-x-1 transition-transform">→</span>

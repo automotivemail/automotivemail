@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { ShoppingBag, User, ChevronDown, Check, Package, MapPin, ExternalLink, Menu, X, LogIn, LogOut, Loader2 } from 'lucide-react';
 
 export const Header: React.FC = () => {
-  const { cartCount, setIsCartOpen, setIsAccountOpen, setIsDropsModalOpen, userSubscription } =
+  const { cartCount, setIsCartOpen, setIsAccountOpen, setIsDropsModalOpen, userSubscription, subscribeNow } =
     useAutomotiveMail();
   const { user, userProfile, loading: authLoading, openAuthModal, logOut } = useAuth();
 
@@ -209,12 +209,13 @@ export const Header: React.FC = () => {
             </button>
 
             {/* Subscribe Now Direct CTA */}
-            <a
-              href="#plans"
-              className="hidden sm:inline-flex items-center px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[#0A0A0C] bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] hover:from-[#FFF1C5] hover:to-[#D4AF37] rounded transition-all shadow-[0_2px_12px_rgba(229,193,88,0.2)] hover:shadow-[0_4px_20px_rgba(229,193,88,0.35)] shrink-0"
+            <button
+              type="button"
+              onClick={() => subscribeNow('both')}
+              className="hidden sm:inline-flex items-center px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[#0A0A0C] bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] hover:from-[#FFF1C5] hover:to-[#D4AF37] rounded transition-all shadow-[0_2px_12px_rgba(229,193,88,0.2)] hover:shadow-[0_4px_20px_rgba(229,193,88,0.35)] shrink-0 cursor-pointer"
             >
               Subscribe Now
-            </a>
+            </button>
 
             {/* Mobile Menu Toggle Button */}
             <button
@@ -272,13 +273,16 @@ export const Header: React.FC = () => {
             )}
 
             <div className="pt-2">
-              <a
-                href="#plans"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full inline-block text-center py-2.5 text-xs font-bold uppercase tracking-wider text-[#0A0A0C] bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] rounded"
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  subscribeNow('both');
+                }}
+                className="w-full inline-block text-center py-2.5 text-xs font-bold uppercase tracking-wider text-[#0A0A0C] bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] rounded cursor-pointer"
               >
                 Subscribe Now
-              </a>
+              </button>
             </div>
           </div>
         </div>

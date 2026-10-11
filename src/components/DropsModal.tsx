@@ -7,7 +7,7 @@ import aircraftImg from '../assets/images/mosaic_vintage_aircraft_1791615916243.
 import racecarImg from '../assets/images/legendary_subject_racecar_1791615873936.jpg';
 
 export const DropsModal: React.FC = () => {
-  const { isDropsModalOpen, setIsDropsModalOpen, addToCart } = useAutomotiveMail();
+  const { isDropsModalOpen, setIsDropsModalOpen, subscribeNow } = useAutomotiveMail();
   const [selectedDrop, setSelectedDrop] = useState<DropItem>(DROPS_CATALOG[0]);
   const [activeTab, setActiveTab] = useState<'poster' | 'blueprint' | 'magazine' | 'letter' | 'polaroids'>('poster');
 
@@ -231,21 +231,23 @@ export const DropsModal: React.FC = () => {
               {/* Action Buttons */}
               <div className="pt-4 border-t border-[#1E1E28] flex flex-col sm:flex-row items-center gap-3">
                 <button
+                  type="button"
                   onClick={() => {
                     setIsDropsModalOpen(false);
-                    addToCart(selectedDrop.category === 'car' ? 'cars' : 'planes');
+                    subscribeNow(selectedDrop.category === 'car' ? 'cars' : 'planes');
                   }}
-                  className="w-full sm:flex-1 py-3 px-4 rounded text-xs font-bold uppercase tracking-[0.16em] bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] hover:from-white hover:to-[#D4AF37] text-black transition-all shadow-md text-center"
+                  className="w-full sm:flex-1 py-3 px-4 rounded text-xs font-bold uppercase tracking-[0.16em] bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] hover:from-white hover:to-[#D4AF37] text-black transition-all shadow-md text-center cursor-pointer"
                 >
                   Subscribe to Receive This Drop
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => {
                     setIsDropsModalOpen(false);
-                    addToCart('both');
+                    subscribeNow('both');
                   }}
-                  className="w-full sm:w-auto py-3 px-4 rounded text-xs font-bold uppercase tracking-[0.16em] bg-[#181822] hover:bg-[#22222E] border border-[#2E2E3E] text-[#E6E4DF] transition-all whitespace-nowrap"
+                  className="w-full sm:w-auto py-3 px-4 rounded text-xs font-bold uppercase tracking-[0.16em] bg-[#181822] hover:bg-[#22222E] border border-[#2E2E3E] text-[#E6E4DF] transition-all whitespace-nowrap cursor-pointer"
                 >
                   Get Both Worlds (₹759)
                 </button>
