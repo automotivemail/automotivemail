@@ -159,6 +159,106 @@
         }
       },
       "required": ["id", "userId", "planId", "status", "price"]
+    },
+    "CustomerRequest": {
+      "title": "CustomerRequest",
+      "description": "Customer subscription and art print requests submitted without upfront payment",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique request reference identifier"
+        },
+        "uid": {
+          "type": "string",
+          "description": "The UID of the authenticated customer"
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Customer full name"
+        },
+        "customerEmail": {
+          "type": "string",
+          "format": "email",
+          "description": "Customer contact email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number"
+        },
+        "shippingAddress": {
+          "type": "object",
+          "description": "Indian postal delivery address details"
+        },
+        "requestType": {
+          "type": "string",
+          "enum": ["subscription", "individual_print", "custom_enquiry"],
+          "description": "Type of collector request"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["automotive", "aviation", "both"],
+          "description": "Subject category"
+        },
+        "planId": {
+          "type": "string",
+          "description": "Subscription tier identifier if applicable"
+        },
+        "planName": {
+          "type": "string",
+          "description": "Subscription tier name or product title"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Requested quantity"
+        },
+        "requirements": {
+          "type": "string",
+          "description": "Customer preferences and special instructions"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional customer notes"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "accepted", "declined", "completed"],
+          "description": "Curation status of the request"
+        },
+        "adminResponse": {
+          "type": "string",
+          "description": "Optional feedback or reason provided by the administrator"
+        },
+        "trackingNumber": {
+          "type": "string",
+          "description": "Consignment tracking code assigned by admin"
+        },
+        "trackingCarrier": {
+          "type": "string",
+          "description": "Courier service name assigned by admin"
+        },
+        "trackingStatus": {
+          "type": "string",
+          "description": "Fulfillment and delivery status step"
+        },
+        "dispatchDate": {
+          "type": "string",
+          "description": "Dispatch date recorded by admin"
+        },
+        "estimatedDelivery": {
+          "type": "string",
+          "description": "Estimated delivery window"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Submission timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["id", "uid", "customerName", "customerEmail", "requestType", "status"]
     }
   },
   "firestore": {
@@ -173,6 +273,10 @@
     "/subscriptions/{subscriptionId}": {
       "schema": "Subscription",
       "description": "Collector monthly subscriptions queryable and readable only by the owner"
+    },
+    "/customerRequests/{requestId}": {
+      "schema": "CustomerRequest",
+      "description": "Customer requests manageable by admins and readable/creatable by the author"
     }
   }
 }

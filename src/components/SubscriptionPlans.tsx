@@ -4,7 +4,7 @@ import { useAutomotiveMail } from '../context/AutomotiveMailContext';
 import { Check, ShieldCheck, Sparkles, Image as ImageIcon, FileText, Compass, Camera, BookOpen } from 'lucide-react';
 
 export const SubscriptionPlans: React.FC = () => {
-  const { addToCart, subscribeNow, setIsDropsModalOpen } = useAutomotiveMail();
+  const { subscribeNow, setIsDropsModalOpen } = useAutomotiveMail();
 
   const getIncludeIcon = (key: string) => {
     switch (key) {
@@ -24,7 +24,7 @@ export const SubscriptionPlans: React.FC = () => {
   };
 
   return (
-    <section id="plans" className="relative py-24 bg-[#0A0A0E] border-t border-[#1C1C22]">
+    <section id="plans" className="relative py-24 bg-[#0A0A0E] border-t border-[#1C1C22] scroll-mt-24">
       {/* Background architectural aura */}
       <div className="absolute inset-0 archival-grain opacity-40 pointer-events-none" />
 
@@ -32,13 +32,13 @@ export const SubscriptionPlans: React.FC = () => {
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <span className="text-xs font-mono uppercase tracking-[0.24em] text-[#C5A059] block mb-3">
-            Monthly Collector Dispatches
+            Monthly Collector Dispatches · No Upfront Payment
           </span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-wider font-serif-display text-[#F5F2EB] mb-4">
             Subscription Plans
           </h2>
           <p className="text-[#A8A59E] font-editorial text-lg italic max-w-xl mx-auto">
-            Choose your monthly payload. Every tier ships in our rigid wax-sealed mailer with free tracked delivery to every PIN code in India.
+            Choose your monthly payload. Submit your collector request without upfront payment. Every tier ships in our rigid wax-sealed mailer with free tracked express delivery across India.
           </p>
         </div>
 

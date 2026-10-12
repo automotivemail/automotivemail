@@ -15,6 +15,8 @@ import {
   Package,
   LogOut,
   Sparkles,
+  MapPin,
+  Clock,
 } from 'lucide-react';
 
 interface LoginPageProps {
@@ -36,7 +38,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     logOut,
     loading: authLoading,
   } = useAuth();
-  const { userSubscription, cartCount, setIsCartOpen, setCartDrawerStep } = useAutomotiveMail();
+
+  const {
+    userRequests,
+    intendedRequest,
+    setIntendedRequest,
+    openRequestModal,
+    setIsAccountOpen,
+  } = useAutomotiveMail();
 
   const [mode, setMode] = useState<'login' | 'register' | 'forgot-password'>(defaultMode);
   const [email, setEmail] = useState('');
@@ -47,16 +56,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  const handlePostAuthRedirect = () => {
+    if (intendedRequest) {
+      const pending = intendedRequest;
+      setIntendedRequest(null);
+      if (onBackToHome) onBackToHome();
+      setTimeout(() => openRequestModal(pending), 150);
+    } else {
+      if (onBackToHome) onBackToHome();
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setError(null);
     setIsLoading(true);
     try {
       await signInGoogle();
-      if (cartCount > 0) {
-        setCartDrawerStep('checkout');
-        setIsCartOpen(true);
-      }
-      if (onBackToHome) onBackToHome();
+      handlePostAuthRedirect();
     } catch (err: any) {
       console.error('Google sign-in error:', err);
       setError(err.message || 'Failed to sign in with Google. Please try again.');
@@ -74,11 +90,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     try {
       if (mode === 'login') {
         await signInEmail(email, password);
-        if (cartCount > 0) {
-          setCartDrawerStep('checkout');
-          setIsCartOpen(true);
-        }
-        if (onBackToHome) onBackToHome();
+        handlePostAuthRedirect();
       } else if (mode === 'register') {
         if (password.length < 6) {
           throw new Error('Password must be at least 6 characters.');
@@ -87,11 +99,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           throw new Error('Passwords do not match.');
         }
         await signUpEmail(email, password, name);
-        if (cartCount > 0) {
-          setCartDrawerStep('checkout');
-          setIsCartOpen(true);
-        }
-        if (onBackToHome) onBackToHome();
+        handlePostAuthRedirect();
       } else if (mode === 'forgot-password') {
         await sendResetEmail(email);
         setSuccessMsg(`Password reset instructions sent to ${email}. Check your inbox.`);
@@ -99,7 +107,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     } catch (err: any) {
       console.error('Auth action error:', err);
       let msg = err.message || 'Authentication failed. Please check your credentials.';
-      if (msg.includes('auth/invalid-credential') || msg.includes('auth/user-not-found') || msg.includes('auth/wrong-password')) {
+      if (
+        msg.includes('auth/operation-not-allowed') ||
+        (err?.code && err.code === 'auth/operation-not-allowed')
+      ) {
+        msg = 'Email/password sign-in is not activated for this Firebase project. Please use "Continue with Google" above to sign in instantly with Firebase.';
+      } else if (
+        msg.includes('auth/invalid-credential') ||
+        msg.includes('auth/user-not-found') ||
+        msg.includes('auth/wrong-password')
+      ) {
         msg = 'Invalid email or password. Please verify your credentials.';
       } else if (msg.includes('auth/email-already-in-use')) {
         msg = 'An account with this email address already exists. Please sign in.';
@@ -115,25 +132,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   return (
     <div className="min-h-screen bg-[#08080A] text-[#E6E4DF] flex flex-col justify-between selection:bg-[#C5A059]/30 selection:text-[#F3E5AB]">
       {/* Top Header Bar */}
-      <header className="border-b border-[#1A1A22] bg-[#0C0C0F]/90 backdrop-blur-md px-6 py-4">
+      <header className="border-b border-[#1A1A22] bg-[#0C0C0F]/90 backdrop-blur-md px-4 sm:px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => {
-                if (onBackToHome) {
-                  onBackToHome();
-                } else {
-                  window.location.hash = '';
-                }
-              }}
-              className="flex items-center gap-2 text-xs font-mono text-[#8E8C85] hover:text-[#E5C158] transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Automotive Mail</span>
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              if (onBackToHome) onBackToHome();
+              else window.location.hash = '';
+            }}
+            className="flex items-center gap-2 text-xs font-mono text-[#8E8C85] hover:text-[#E5C158] transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Automotive Mail</span>
+          </button>
           <AutomotiveMailLogo />
-          <div className="text-xs font-mono text-[#8E8C85]">
+          <div className="text-xs font-mono text-[#8E8C85] hidden sm:block">
             Collector Portal
           </div>
         </div>
@@ -142,10 +154,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       {/* Main Container */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-8">
         <div className="w-full max-w-md bg-[#0F0F14] border border-[#262633] rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
-          {/* Subtle gold accent border glow */}
+          {/* Accent Glow */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#E5C158] to-transparent opacity-60" />
 
-          {/* If already authenticated, show logged-in account status card */}
+          {/* Authenticated State Card */}
           {user && !authLoading ? (
             <div className="space-y-6 text-center">
               <div className="w-16 h-16 rounded-full bg-[#181824] border border-[#C5A059]/40 flex items-center justify-center mx-auto text-[#E5C158]">
@@ -162,27 +174,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <p className="text-xs font-mono text-[#8E8C85] mt-1">{user.email}</p>
               </div>
 
-              {/* Status card */}
-              <div className="p-4 rounded-xl bg-[#14141C] border border-[#242432] text-left text-xs space-y-2">
+              {/* Real Firestore Status Card */}
+              <div className="p-4 rounded-xl bg-[#14141C] border border-[#242432] text-left text-xs space-y-2.5 font-mono">
                 <div className="flex items-center justify-between text-[#8E8C85]">
-                  <span>Subscription Status:</span>
-                  {userSubscription ? (
-                    <span className="text-[#34D399] font-mono font-medium">
-                      Active · {userSubscription.planName}
-                    </span>
-                  ) : (
-                    <span className="text-[#8E8C85] font-mono">No Active Plan</span>
-                  )}
+                  <span>Collector Requests:</span>
+                  <span className="text-white font-bold">{userRequests.length} active</span>
                 </div>
-                {userSubscription && (
-                  <div className="flex items-center justify-between text-[#8E8C85]">
-                    <span>Next Dispatch:</span>
-                    <span className="text-white font-mono">{userSubscription.nextDispatchDate}</span>
-                  </div>
-                )}
                 <div className="flex items-center justify-between text-[#8E8C85]">
-                  <span>Shipping Address:</span>
-                  <span className="text-white">
+                  <span>Delivery Address:</span>
+                  <span className="text-white truncate max-w-[170px]">
                     {userProfile?.shippingAddress?.city
                       ? `${userProfile.shippingAddress.city}, PIN ${userProfile.shippingAddress.pincode}`
                       : 'Not saved yet'}
@@ -190,18 +190,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 </div>
               </div>
 
-              {cartCount > 0 && (
+              {intendedRequest && (
                 <div className="p-3 rounded-lg bg-[#241B0E] border border-[#E5C158]/40 text-xs text-[#F4E3B2] flex items-center justify-between">
-                  <span>Items waiting in mailbag ({cartCount})</span>
+                  <span>Pending request preserved: {intendedRequest.planName || intendedRequest.category}</span>
                   <button
-                    onClick={() => {
-                      setCartDrawerStep('checkout');
-                      setIsCartOpen(true);
-                      if (onBackToHome) onBackToHome();
-                    }}
-                    className="font-bold underline text-[#E5C158]"
+                    onClick={handlePostAuthRedirect}
+                    className="font-bold underline text-[#E5C158] cursor-pointer"
                   >
-                    Proceed to Checkout →
+                    Resume Request →
                   </button>
                 </div>
               )}
@@ -210,17 +206,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <button
                   onClick={() => {
                     if (onBackToHome) onBackToHome();
+                    setIsAccountOpen(true);
                   }}
-                  className="w-full py-3 rounded text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] text-black shadow-lg hover:brightness-105 transition-all"
+                  className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-[#F4E3B2] via-[#E5C158] to-[#C5A059] text-black shadow-lg hover:brightness-105 transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
-                  Return to Print Gallery
+                  <Package className="w-4 h-4 text-black" />
+                  <span>View My Requests & Order Tracking</span>
                 </button>
+
                 <button
                   onClick={async () => {
                     await logOut();
                     setMode('login');
                   }}
-                  className="w-full py-2.5 rounded text-xs font-mono uppercase tracking-wider bg-[#181822] text-[#EF4444] hover:bg-[#251216] border border-[#301B20] transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-lg text-xs font-mono uppercase tracking-wider bg-[#181822] text-[#EF4444] hover:bg-[#251216] border border-[#301B20] transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Sign Out of Collector Portal</span>
@@ -229,7 +228,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
           ) : (
             <>
-              {/* Heading */}
+              {/* Form Heading */}
               <div className="text-center space-y-2 mb-6">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-[#1C180E] border border-[#C5A059]/30 text-[10px] font-mono text-[#E5C158] uppercase tracking-wider">
                   <Sparkles className="w-3 h-3" />
@@ -242,7 +241,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 </h1>
                 <p className="text-xs text-[#8E8C85] max-w-xs mx-auto">
                   {mode === 'login' &&
-                    'Sign in to access monthly print drops, dispatch tracking, and subscription billing.'}
+                    'Sign in to access your collector requests, track physical deliveries, and manage your Indian postal address.'}
                   {mode === 'register' &&
                     'Create your collector profile to begin receiving limited-edition vintage prints across India.'}
                   {mode === 'forgot-password' &&
@@ -250,7 +249,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 </p>
               </div>
 
-              {/* Mode Switcher Tabs */}
+              {/* Mode Tabs */}
               <div className="grid grid-cols-2 gap-1 bg-[#14141C] p-1 rounded-xl mb-6 border border-[#20202C]">
                 <button
                   type="button"
@@ -259,7 +258,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     setError(null);
                     setSuccessMsg(null);
                   }}
-                  className={`py-2 text-xs font-semibold rounded-lg transition-all ${
+                  className={`py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                     mode === 'login'
                       ? 'bg-[#22222E] text-white shadow-sm'
                       : 'text-[#8E8C85] hover:text-white'
@@ -274,7 +273,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     setError(null);
                     setSuccessMsg(null);
                   }}
-                  className={`py-2 text-xs font-semibold rounded-lg transition-all ${
+                  className={`py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                     mode === 'register'
                       ? 'bg-[#22222E] text-white shadow-sm'
                       : 'text-[#8E8C85] hover:text-white'
@@ -299,14 +298,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 </div>
               )}
 
-              {/* Google 1-Click Button */}
+              {/* Google 1-Click Authenticator Button */}
               {mode !== 'forgot-password' && (
                 <div className="space-y-4 mb-6">
                   <button
                     type="button"
                     disabled={isLoading}
                     onClick={handleGoogleSignIn}
-                    className="w-full py-3 px-4 rounded-xl bg-[#14141C] hover:bg-[#1A1A24] border border-[#282838] hover:border-[#C5A059]/40 text-xs font-semibold text-white transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                    className="w-full py-3 px-4 rounded-xl bg-[#14141C] hover:bg-[#1A1A24] border border-[#282838] hover:border-[#C5A059]/40 text-xs font-semibold text-white transition-all flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer shadow-md"
                   >
                     <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                       <path
@@ -326,7 +325,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                       />
                     </svg>
-                    <span>Continue with Google</span>
+                    <span>Continue with Google (Firebase Authenticator)</span>
                   </button>
 
                   <div className="relative flex items-center justify-center">
@@ -351,7 +350,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Vikramaditya Sen"
+                        placeholder="e.g. Full Name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="w-full text-xs pl-9 pr-3 py-2.5 bg-[#14141C] border border-[#242432] rounded-lg text-white focus:outline-none focus:border-[#E5C158] transition-colors"
@@ -390,7 +389,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                             setMode('forgot-password');
                             setError(null);
                           }}
-                          className="text-[10px] text-[#C5A059] hover:underline"
+                          className="text-[10px] text-[#C5A059] hover:underline cursor-pointer"
                         >
                           Forgot password?
                         </button>
@@ -462,7 +461,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       setMode('login');
                       setError(null);
                     }}
-                    className="text-xs text-[#8E8C85] hover:text-white transition-colors"
+                    className="text-xs text-[#8E8C85] hover:text-white transition-colors cursor-pointer"
                   >
                     ← Back to Sign In
                   </button>
@@ -486,3 +485,4 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     </div>
   );
 };
+export default LoginPage;

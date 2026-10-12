@@ -17,9 +17,12 @@ export interface UserShippingAddress {
   fullName: string;
   phone: string;
   streetAddress: string;
+  landmark?: string;
+  area?: string;
   city: string;
   state: string;
   pincode: string;
+  country: string;
 }
 
 export interface UserProfile {
@@ -36,6 +39,7 @@ interface AuthContextType {
   user: FirebaseUser | null;
   userProfile: UserProfile | null;
   loading: boolean;
+  isAdmin: boolean;
   isAuthModalOpen: boolean;
   authModalMode: 'login' | 'register' | 'forgot-password';
   openAuthModal: (mode?: 'login' | 'register' | 'forgot-password', onComplete?: () => void) => void;
@@ -198,12 +202,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const isAdmin = Boolean(
+    user && (
+      user.email?.toLowerCase() === 'ask.automotivemail@gmail.com' ||
+      user.email?.toLowerCase() === 'admin@automotivemail.com'
+    )
+  );
+
   return (
     <AuthContext.Provider
       value={{
         user,
         userProfile,
         loading,
+        isAdmin,
         isAuthModalOpen,
         authModalMode,
         openAuthModal,

@@ -1,323 +1,312 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { SUBSCRIPTION_PLANS, PlanTier } from '../data/automotiveMailData';
 import { useAuth, UserShippingAddress } from './AuthContext';
-import { collection, query, where, onSnapshot, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, auth } from '../firebase';
 
-export interface CartItem {
-  plan: PlanTier;
-  quantity: number;
-  isGift: boolean;
-  giftRecipientName?: string;
-  giftMessage?: string;
-}
+export type RequestType = 'subscription' | 'individual_print' | 'custom_enquiry';
+export type RequestCategory = 'automotive' | 'aviation' | 'both';
+export type RequestStatus = 'pending' | 'accepted' | 'declined' | 'completed';
 
-export interface FirestoreOrder {
-  id: string;
-  userId: string;
-  userEmail: string;
+export interface CustomerRequest {
+  id: string; // Firestore document ID
+  uid: string;
   customerName: string;
-  planId: 'cars' | 'planes' | 'both';
-  planName: string;
-  quantity: number;
-  price: number;
-  currency: 'INR';
-  status: 'confirmed' | 'processing' | 'dispatched';
+  customerEmail: string;
+  phone: string;
   shippingAddress: UserShippingAddress;
-  isGift: boolean;
-  giftDetails?: {
-    recipient: string;
-    note: string;
-  };
-  trackingNumber: string;
-  estimatedDelivery: string;
-  createdAt: string;
-}
-
-export interface FirestoreSubscription {
-  id: string;
-  userId: string;
-  planId: 'cars' | 'planes' | 'both';
-  planName: string;
-  status: 'active' | 'paused' | 'cancelled';
-  price: number;
-  currency: 'INR';
-  nextDispatchDate: string;
+  requestType: RequestType;
+  category: RequestCategory;
+  planId?: string;
+  planName?: string;
+  productId?: string;
+  productName?: string;
+  quantity: number;
+  requirements?: string;
+  notes?: string;
+  status: RequestStatus;
+  adminResponse?: string | null;
+  trackingNumber?: string | null;
+  trackingCarrier?: string | null;
+  trackingStatus?: string | null;
+  dispatchDate?: string | null;
+  estimatedDelivery?: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface IntendedRequest {
+  requestType: RequestType;
+  category: RequestCategory;
+  planId?: string;
+  planName?: string;
+  productId?: string;
+  productName?: string;
+  quantity?: number;
+  requirements?: string;
+  notes?: string;
+}
+
 interface AutomotiveMailContextType {
-  cart: CartItem[];
-  cartCount: number;
-  cartTotal: number;
-  addToCart: (planId: 'cars' | 'planes' | 'both', isGift?: boolean) => void;
+  // Requests
+  userRequests: CustomerRequest[];
+  allRequests: CustomerRequest[];
+  requestsLoading: boolean;
+  isRequestModalOpen: boolean;
+  setIsRequestModalOpen: (open: boolean) => void;
+  activeRequestPrefill: Partial<CustomerRequest> | null;
+  openRequestModal: (prefill?: Partial<CustomerRequest>) => void;
+  closeRequestModal: () => void;
+  submitCustomerRequest: (
+    data: Omit<CustomerRequest, 'id' | 'uid' | 'createdAt' | 'updatedAt' | 'status'>
+  ) => Promise<CustomerRequest>;
+  updateCustomerRequest: (
+    requestId: string,
+    updates: Partial<CustomerRequest>
+  ) => Promise<void>;
+
+  // Subscriptions & CTAs
   subscribeNow: (planId?: 'cars' | 'planes' | 'both', isGift?: boolean) => void;
-  removeFromCart: (planId: string) => void;
-  clearCart: () => void;
-  isCartOpen: boolean;
-  setIsCartOpen: (open: boolean) => void;
-  cartDrawerStep: 'cart' | 'checkout' | 'success';
-  setCartDrawerStep: (step: 'cart' | 'checkout' | 'success') => void;
+  intendedRequest: IntendedRequest | null;
+  setIntendedRequest: (req: IntendedRequest | null) => void;
+
+  // Modals & Navigation
   isAccountOpen: boolean;
   setIsAccountOpen: (open: boolean) => void;
   isDropsModalOpen: boolean;
   setIsDropsModalOpen: (open: boolean) => void;
-  userOrders: FirestoreOrder[];
-  ordersLoading: boolean;
-  userSubscription: FirestoreSubscription | null;
-  subscriptionLoading: boolean;
-  lastOrder: FirestoreOrder | null;
-  isSubmittingOrder: boolean;
-  completeCheckout: (details: {
-    address: UserShippingAddress;
-    paymentMethod: string;
-    giftDetails?: { recipient: string; note: string };
-  }) => Promise<FirestoreOrder>;
+  isAdminPortalOpen: boolean;
+  setIsAdminPortalOpen: (open: boolean) => void;
+
+  // Backward compatibility aliases
+  cartCount: number;
+  isCartOpen: boolean;
+  setIsCartOpen: (open: boolean) => void;
 }
 
 const AutomotiveMailContext = createContext<AutomotiveMailContextType | undefined>(undefined);
 
 export const AutomotiveMailProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, saveShippingAddress, openAuthModal } = useAuth();
+  const { user, isAdmin, openAuthModal, saveShippingAddress, userProfile } = useAuth();
 
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [cartDrawerStep, setCartDrawerStep] = useState<'cart' | 'checkout' | 'success'>('cart');
+  const [userRequests, setUserRequests] = useState<CustomerRequest[]>([]);
+  const [allRequests, setAllRequests] = useState<CustomerRequest[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [activeRequestPrefill, setActiveRequestPrefill] = useState<Partial<CustomerRequest> | null>(null);
+  const [intendedRequest, setIntendedRequest] = useState<IntendedRequest | null>(null);
+
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isDropsModalOpen, setIsDropsModalOpen] = useState(false);
-  const [userOrders, setUserOrders] = useState<FirestoreOrder[]>([]);
-  const [ordersLoading, setOrdersLoading] = useState(false);
-  const [userSubscription, setUserSubscription] = useState<FirestoreSubscription | null>(null);
-  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
-  const [lastOrder, setLastOrder] = useState<FirestoreOrder | null>(null);
-  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [isAdminPortalOpen, setIsAdminPortalOpen] = useState(false);
 
-  // Sync real orders from Firestore when authenticated
+  // 1. Sync Customer's Own Requests from Firestore
   useEffect(() => {
     if (!user) {
-      setUserOrders([]);
-      setUserSubscription(null);
-      setOrdersLoading(false);
-      setSubscriptionLoading(false);
+      setUserRequests([]);
+      setRequestsLoading(false);
       return;
     }
 
-    setOrdersLoading(true);
-    setSubscriptionLoading(true);
-
-    const ordersQuery = query(collection(db, 'orders'), where('userId', '==', user.uid));
-    const unsubscribeOrders = onSnapshot(
-      ordersQuery,
+    setRequestsLoading(true);
+    const q = query(collection(db, 'customerRequests'), where('uid', '==', user.uid));
+    const unsubscribe = onSnapshot(
+      q,
       (snapshot) => {
-        const ordersData: FirestoreOrder[] = [];
+        const list: CustomerRequest[] = [];
         snapshot.forEach((docSnap) => {
-          ordersData.push(docSnap.data() as FirestoreOrder);
+          list.push({ id: docSnap.id, ...(docSnap.data() as Omit<CustomerRequest, 'id'>) });
         });
         // Sort newest first
-        ordersData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setUserOrders(ordersData);
-        setOrdersLoading(false);
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setUserRequests(list);
+        setRequestsLoading(false);
       },
       (error) => {
-        console.error('Error listening to user orders:', error);
-        setOrdersLoading(false);
+        console.error('Error fetching customer requests:', error);
+        setRequestsLoading(false);
       }
     );
 
-    const subscriptionsQuery = query(collection(db, 'subscriptions'), where('userId', '==', user.uid));
-    const unsubscribeSubscriptions = onSnapshot(
-      subscriptionsQuery,
-      (snapshot) => {
-        let activeSub: FirestoreSubscription | null = null;
-        snapshot.forEach((docSnap) => {
-          const sub = docSnap.data() as FirestoreSubscription;
-          if (sub.status === 'active') {
-            activeSub = sub;
-          }
-        });
-        setUserSubscription(activeSub);
-        setSubscriptionLoading(false);
-      },
-      (error) => {
-        console.error('Error listening to user subscription:', error);
-        setSubscriptionLoading(false);
-      }
-    );
-
-    return () => {
-      unsubscribeOrders();
-      unsubscribeSubscriptions();
-    };
+    return () => unsubscribe();
   }, [user]);
 
-  const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const cartTotal = cart.reduce((acc, item) => acc + item.plan.price * item.quantity, 0);
+  // 2. Sync All Requests for Authorized Admin
+  useEffect(() => {
+    if (!user || !isAdmin) {
+      setAllRequests([]);
+      return;
+    }
 
-  const addToCart = (planId: 'cars' | 'planes' | 'both', isGift = false) => {
-    const selectedPlan = SUBSCRIPTION_PLANS.find((p) => p.id === planId) || SUBSCRIPTION_PLANS[0];
-    setCart((prev) => {
-      const existing = prev.find((item) => item.plan.id === planId);
-      if (existing) {
-        return prev.map((item) =>
-          item.plan.id === planId ? { ...item, quantity: item.quantity + 1, isGift } : item
-        );
+    const q = query(collection(db, 'customerRequests'));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const list: CustomerRequest[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push({ id: docSnap.id, ...(docSnap.data() as Omit<CustomerRequest, 'id'>) });
+        });
+        // Sort newest first
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setAllRequests(list);
+      },
+      (error) => {
+        console.error('Error fetching all customer requests for admin:', error);
       }
-      return [...prev, { plan: selectedPlan, quantity: 1, isGift }];
-    });
+    );
+
+    return () => unsubscribe();
+  }, [user, isAdmin]);
+
+  // Open Request Modal with prefilled parameters
+  const openRequestModal = (prefill?: Partial<CustomerRequest>) => {
+    setActiveRequestPrefill(prefill || null);
+    setIsRequestModalOpen(true);
+  };
+
+  const closeRequestModal = () => {
+    setIsRequestModalOpen(false);
+    setActiveRequestPrefill(null);
+  };
+
+  /**
+   * Handle Subscribe / Subscribe Now clicks
+   * - If not logged in: opens customer login/create-account, preserving choice.
+   * - Once logged in: opens the request form directly with choice preserved.
+   */
+  const subscribeNow = (planId: 'cars' | 'planes' | 'both' = 'both', isGift = false) => {
+    const selectedPlan = SUBSCRIPTION_PLANS.find((p) => p.id === planId) || SUBSCRIPTION_PLANS[1];
+    const category: RequestCategory = planId === 'cars' ? 'automotive' : planId === 'planes' ? 'aviation' : 'both';
+
+    const requestData: IntendedRequest = {
+      requestType: 'subscription',
+      category,
+      planId: selectedPlan.id,
+      planName: selectedPlan.name,
+      quantity: 1,
+      requirements: isGift ? 'Gift Subscription with wax-sealed dedication' : '',
+    };
 
     if (!user) {
+      // Remember choice and open auth modal
+      setIntendedRequest(requestData);
       openAuthModal('login', () => {
-        setCartDrawerStep('cart');
-        setIsCartOpen(true);
+        // Callback after successful authentication
+        openRequestModal({
+          requestType: 'subscription',
+          category,
+          planId: selectedPlan.id,
+          planName: selectedPlan.name,
+          quantity: 1,
+          requirements: requestData.requirements,
+        });
       });
     } else {
-      setCartDrawerStep('cart');
-      setIsCartOpen(true);
+      // Already authenticated: directly launch request modal
+      openRequestModal({
+        requestType: 'subscription',
+        category,
+        planId: selectedPlan.id,
+        planName: selectedPlan.name,
+        quantity: 1,
+        requirements: requestData.requirements,
+      });
     }
   };
 
   /**
-   * Directly triggers subscription checkout flow linked to Firestore
-   * Ensures only authenticated users can trigger the transaction.
+   * Submit customer request without payment
    */
-  const subscribeNow = (planId: 'cars' | 'planes' | 'both' = 'both', isGift = false) => {
-    const selectedPlan = SUBSCRIPTION_PLANS.find((p) => p.id === planId) || SUBSCRIPTION_PLANS[1];
-    // Set active item for checkout
-    setCart([{ plan: selectedPlan, quantity: 1, isGift }]);
-
-    if (!user) {
-      // Require authentication first, then resume directly to checkout
-      openAuthModal('login', () => {
-        setCartDrawerStep('checkout');
-        setIsCartOpen(true);
-      });
-    } else {
-      // Authenticated user proceeds directly to checkout step
-      setCartDrawerStep('checkout');
-      setIsCartOpen(true);
-    }
-  };
-
-  const removeFromCart = (planId: string) => {
-    setCart((prev) => prev.filter((item) => item.plan.id !== planId));
-  };
-
-  const clearCart = () => {
-    setCart([]);
-  };
-
-  const completeCheckout = async ({
-    address,
-    giftDetails,
-  }: {
-    address: UserShippingAddress;
-    paymentMethod: string;
-    giftDetails?: { recipient: string; note: string };
-  }): Promise<FirestoreOrder> => {
-    // HARD ENFORCEMENT: Only authenticated users can write orders
+  const submitCustomerRequest = async (
+    data: Omit<CustomerRequest, 'id' | 'uid' | 'createdAt' | 'updatedAt' | 'status'>
+  ): Promise<CustomerRequest> => {
     if (!auth.currentUser || !user) {
-      throw new Error('Authentication required: You must be signed in with Firebase to place an order.');
-    }
-    if (isSubmittingOrder) {
-      throw new Error('Order submission is already processing.');
+      throw new Error('Authentication required: Please sign in to submit your collector request.');
     }
 
-    setIsSubmittingOrder(true);
+    const docRef = doc(collection(db, 'customerRequests'));
+    const requestId = docRef.id;
+    const now = new Date().toISOString();
+
+    const newRequest: CustomerRequest = {
+      ...data,
+      id: requestId,
+      uid: user.uid,
+      customerEmail: user.email || data.customerEmail,
+      status: 'pending',
+      adminResponse: null,
+      trackingNumber: null,
+      trackingCarrier: null,
+      trackingStatus: null,
+      dispatchDate: null,
+      estimatedDelivery: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
     try {
-      const selectedPlan = cart.length > 0 ? cart[0].plan : SUBSCRIPTION_PLANS[1];
-      const amount = cartTotal || selectedPlan.price;
-      const orderId = `AM-${Date.now().toString().slice(-6)}`;
-
-      // Calculate upcoming monthly dispatch date (15th of next month)
-      const nextMonth = new Date();
-      nextMonth.setMonth(nextMonth.getMonth() + 1);
-      nextMonth.setDate(15);
-      const computedNextDispatch = nextMonth.toLocaleDateString('en-IN', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      });
-
-      const newOrder: FirestoreOrder = {
-        id: orderId,
-        userId: user.uid,
-        userEmail: user.email || '',
-        customerName: address.fullName,
-        planId: selectedPlan.id,
-        planName: selectedPlan.name,
-        quantity: cart.length > 0 ? cart[0].quantity : 1,
-        price: amount,
-        currency: 'INR',
-        status: 'confirmed',
-        shippingAddress: address,
-        isGift: Boolean(giftDetails?.recipient),
-        giftDetails: giftDetails?.recipient ? giftDetails : undefined,
-        trackingNumber: 'Pending dispatch',
-        estimatedDelivery: '3 to 5 business days after monthly dispatch',
-        createdAt: new Date().toISOString(),
-      };
-
-      // 1. Save order to Firestore 'orders' collection
-      const orderDocRef = doc(db, 'orders', orderId);
-      await setDoc(orderDocRef, newOrder);
-
-      // 2. Save active subscription to Firestore 'subscriptions' collection
-      const subscriptionId = `sub_${user.uid}_${selectedPlan.id}`;
-      const newSubscription: FirestoreSubscription = {
-        id: subscriptionId,
-        userId: user.uid,
-        planId: selectedPlan.id,
-        planName: selectedPlan.name,
-        status: 'active',
-        price: selectedPlan.price,
-        currency: 'INR',
-        nextDispatchDate: computedNextDispatch,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      const subDocRef = doc(db, 'subscriptions', subscriptionId);
-      await setDoc(subDocRef, newSubscription);
-
-      // 3. Save shipping address to user profile in Firestore
-      await saveShippingAddress(address);
-
-      setLastOrder(newOrder);
-      setCart([]);
-      return newOrder;
+      await setDoc(docRef, newRequest);
+      // Auto-save shipping address to customer profile if provided
+      if (data.shippingAddress) {
+        await saveShippingAddress(data.shippingAddress);
+      }
+      return newRequest;
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'orders');
+      handleFirestoreError(err, OperationType.WRITE, `customerRequests/${requestId}`);
       throw err;
-    } finally {
-      setIsSubmittingOrder(false);
+    }
+  };
+
+  /**
+   * Admin updates a request status, customer response, or tracking details
+   */
+  const updateCustomerRequest = async (
+    requestId: string,
+    updates: Partial<CustomerRequest>
+  ): Promise<void> => {
+    if (!user) throw new Error('Authentication required.');
+
+    const docRef = doc(db, 'customerRequests', requestId);
+    const updatedData = {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      await updateDoc(docRef, updatedData);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `customerRequests/${requestId}`);
+      throw err;
     }
   };
 
   return (
     <AutomotiveMailContext.Provider
       value={{
-        cart,
-        cartCount,
-        cartTotal,
-        addToCart,
+        userRequests,
+        allRequests,
+        requestsLoading,
+        isRequestModalOpen,
+        setIsRequestModalOpen,
+        activeRequestPrefill,
+        openRequestModal,
+        closeRequestModal,
+        submitCustomerRequest,
+        updateCustomerRequest,
         subscribeNow,
-        removeFromCart,
-        clearCart,
-        isCartOpen,
-        setIsCartOpen,
-        cartDrawerStep,
-        setCartDrawerStep,
+        intendedRequest,
+        setIntendedRequest,
         isAccountOpen,
         setIsAccountOpen,
         isDropsModalOpen,
         setIsDropsModalOpen,
-        userOrders,
-        ordersLoading,
-        userSubscription,
-        subscriptionLoading,
-        lastOrder,
-        isSubmittingOrder,
-        completeCheckout,
+        isAdminPortalOpen,
+        setIsAdminPortalOpen,
+        // Backward-compatibility aliases
+        cartCount: userRequests.filter((r) => r.status === 'pending').length,
+        isCartOpen: isRequestModalOpen,
+        setIsCartOpen: setIsRequestModalOpen,
       }}
     >
       {children}

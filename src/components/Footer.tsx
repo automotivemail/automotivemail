@@ -80,6 +80,16 @@ export const Footer: React.FC = () => {
                   FAQ & Inquiries
                 </a>
               </li>
+              <li>
+                <a href="#account" className="hover:text-[#E5C158] transition-colors font-mono">
+                  My Requests & Tracking
+                </a>
+              </li>
+              <li>
+                <a href="#admin" className="hover:text-[#34D399] transition-colors font-mono">
+                  Owner Admin Desk
+                </a>
+              </li>
             </ul>
           </div>
 
